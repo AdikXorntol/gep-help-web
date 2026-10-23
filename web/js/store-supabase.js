@@ -16,12 +16,17 @@
   // Maps Supabase/PostgREST/Auth errors to a small set of codes the UI translates.
   function classify(err) {
     if (!err) return StoreError('unknown');
-    if (err.code && /^(network|permission|invalid|notfound|auth-|image-|unknown)/.test(err.code) && !err.details && !err.hint) return err;
+    // Our own codes pass through; Supabase codes such as 'invalid_credentials' are mapped below.
+    if (err.code && /^(network|permission|invalid|notfound|unknown|last-admin|config|auth-[a-z]+|image-[a-z]+)$/.test(err.code) && !err.details && !err.hint) return err;
     if (U.isNetworkError(err)) return StoreError('network', err);
     var msg = String(err.message || '');
     var code = String(err.code || '');
     var status = Number(err.status || 0);
-    if (/invalid login credentials/i.test(msg)) return StoreError('auth-wrong', err);
+    if (/invalid login credentials/i.test(msg) || code === 'invalid_credentials') return StoreError('auth-wrong', err);
+    if (code === 'weak_password') return StoreError('auth-weak', err);
+    if (code === 'email_address_invalid') return StoreError('auth-email', err);
+    if (code === 'signup_disabled') return StoreError('auth-closed', err);
+    if (/^over_.*rate_limit$/.test(code)) return StoreError('auth-rate', err);
     if (/already registered|already exists|user_already_exists/i.test(msg) || code === 'user_already_exists') return StoreError('auth-exists', err);
     if (/email not confirmed/i.test(msg) || code === 'email_not_confirmed') return StoreError('auth-unconfirmed', err);
     if (/password/i.test(msg) && /(at least|weak|short|characters)/i.test(msg)) return StoreError('auth-weak', err);
