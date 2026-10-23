@@ -137,12 +137,15 @@ jobs:
           # GitHub Pages serves files compressed; 'serve' does the same locally.
           (npx -y serve@14.2.4 web -l 8090 --no-clipboard > /dev/null 2>&1 &)
           for i in $(seq 1 30); do curl -fs http://127.0.0.1:8090/ > /dev/null && break; sleep 1; done
+          npm i -g lighthouse@12.2.1 > /dev/null 2>&1
           for page in "home|" "tutorial|#/t/b0000000-0000-4000-8000-000000000001" "product|#/p/a0000000-0000-4000-8000-000000000003"; do
             name="${page%%|*}"; hash="${page#*|}"
-            npx -y lighthouse@12.2.1 "http://127.0.0.1:8090/$hash" --quiet --chrome-flags="--headless=new --no-sandbox" \
-              --only-categories=performance,accessibility,best-practices --output=json --output-path="lh-$name.json"
+            for run in 1 2 3; do
+              lighthouse "http://127.0.0.1:8090/$hash" --quiet --chrome-flags="--headless=new --no-sandbox" \
+                --only-categories=performance,accessibility,best-practices --output=json --output-path="lh-$name-$run.json"
+            done
           done
-          python3 tests/lighthouse_check.py lh-home.json lh-tutorial.json lh-product.json 2>&1 | tee lighthouse.log
+          python3 tests/lighthouse_check.py home tutorial product 2>&1 | tee lighthouse.log
       - uses: actions/upload-artifact@v4
         if: always()
         with: { name: lighthouse, path: lighthouse.log, if-no-files-found: ignore }
