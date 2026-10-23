@@ -203,6 +203,13 @@ def run(browser):
     go(page, "#/t/b0000000-0000-4000-8000-000000000012")
     page.wait_for_timeout(200)
     body = page.inner_text("main")
+    go(page, "#/t/00000000-0000-4000-8000-00000000dead")
+    page.wait_for_function("!document.querySelector('.skel') && GEPApp.st.refreshing === 0")
+    page.wait_for_timeout(300)
+    check("Pautan tutorial yang tiada: cuba muat semula, kemudian 'Not found'", EN["notfound.title"] in page.inner_text("main"))
+    go(page, "#/t/b0000000-0000-4000-8000-000000000012")
+    page.wait_for_timeout(200)
+    body = page.inner_text("main")
     check("Fallback ke BM dengan label 'Not translated yet'", "Hantar laporan insiden" in body and EN["i18n.notTranslated"] in body)
     ctx.close()
 

@@ -105,6 +105,18 @@
   }
   app.refresh = refresh;
 
+  // A link to something we don't have yet (e.g. just published elsewhere): fetch fresh data once
+  // before saying "not found".
+  var missTried = {};
+  function tryFetchMissing(id) {
+    if (!S || st.refreshing || st.offline) return !!st.refreshing;
+    if (missTried[id] && Date.now() - missTried[id] < 15000) return false;
+    missTried[id] = Date.now();
+    setTimeout(refresh, 0);
+    return true;
+  }
+  app.tryFetchMissing = tryFetchMissing;
+
   /* ======================= routing ======================= */
   function parseRoute() {
     var h = location.hash || '';
@@ -347,6 +359,7 @@
     if (st.loading) return h + loadingBox() + '</main>';
     if (st.loadError) return h + errorBox(st.loadError) + '</main>';
     if (st.settings.wajib_log_masuk && !me()) return h + loginWall() + '</main>';
+    if (!p && tryFetchMissing('p:' + r.parts[1])) return h + loadingBox() + '</main>';
     if (!p) return h + emptyBox(t('notfound.title'), t('notfound.body'), '<a class="btn" href="#/">' + esc(t('nav.home')) + '</a>') + '</main>';
     var d = pick(p, 'keterangan');
     var tuts = visibleTuts(p.id);
@@ -376,6 +389,7 @@
     if (st.loading) return h + loadingBox() + '</main>';
     if (st.loadError) return h + errorBox(st.loadError) + '</main>';
     if (!tu && st.settings.wajib_log_masuk && !me()) return h + loginWall() + '</main>';
+    if (!tu && tryFetchMissing('t:' + r.parts[1])) return h + loadingBox() + '</main>';
     if (!tu) return h + emptyBox(t('notfound.title'), t('notfound.body'), '<a class="btn" href="#/">' + esc(t('nav.home')) + '</a>') + '</main>';
     var steps = st.steps[tu.id] || [];
     var title = pick(tu, 'tajuk'), sum = pick(tu, 'ringkasan');
