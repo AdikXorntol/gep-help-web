@@ -63,12 +63,13 @@
     if (!H.isEditor()) return;
     initSortables(document.getElementById('app'));
     var sub = r.parts[1] || '';
-    if (H.isAdmin() && !adm.inbox && !adm.loadingInbox) loadInbox();
+    var staleInbox = !adm.inboxAt || Date.now() - adm.inboxAt > 15000;
+    if (H.isAdmin() && !adm.loadingInbox && (!adm.inbox || (sub === 'kotak' && staleInbox))) loadInbox();
     if (sub === 'pengguna' && H.isAdmin() && !adm.users && !adm.loadingUsers) loadUsers();
   };
   function loadInbox() {
     adm.loadingInbox = true;
-    S().listInbox().then(function (x) { adm.inbox = x; }, function (e) { adm.inboxErr = e; }).then(function () {
+    S().listInbox().then(function (x) { adm.inbox = x; adm.inboxAt = Date.now(); adm.inboxErr = null; }, function (e) { adm.inboxErr = e; }).then(function () {
       adm.loadingInbox = false;
       if (st.route && st.route.name === 'admin') app.render();
     });

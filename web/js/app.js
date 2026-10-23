@@ -94,6 +94,7 @@
       st.settings = r[1] || st.settings;
       st.mine = r[2];
       st.loading = false; st.loadError = null; st.qa = {};
+      st.refreshedAt = Date.now();
       st.refreshing--;
       render();
     }, function (err) {
@@ -1156,6 +1157,8 @@
     window.addEventListener('hashchange', function () {
       if (layers.length && !backPending) closeAllLayers();
       render();
+      // Pick up changes made on other devices when the data is getting old.
+      if (S && !st.loading && !st.refreshing && Date.now() - (st.refreshedAt || 0) > 20000) refresh();
     });
     var secure = location.protocol === 'https:' || /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
     if ('serviceWorker' in navigator && secure && !CFG.noServiceWorker) {

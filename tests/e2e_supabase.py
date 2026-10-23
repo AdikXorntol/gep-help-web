@@ -15,7 +15,7 @@ ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "web")
 MS = json.load(open(os.path.join(ROOT, "i18n", "ms.json"), encoding="utf-8"))
 EN = json.load(open(os.path.join(ROOT, "i18n", "en.json"), encoding="utf-8"))
 CONFIG = "window.GEP_CONFIG = { supabaseUrl: %s, supabaseAnonKey: %s };" % (json.dumps(SB_URL), json.dumps(SB_KEY))
-results, console_problems = [], []
+results, console_problems, expected_network = [], [], []
 PW = "Rahsia-123"
 
 
@@ -67,8 +67,13 @@ def open_page(ctx, hash_=""):
     page = ctx.new_page()
 
     def on_console(m):
-        if m.type in ("error", "warning") and "Service Worker registration blocked" not in m.text:
-            console_problems.append("%s: %s" % (m.type, m.text))
+        if m.type not in ("error", "warning") or "Service Worker registration blocked" in m.text:
+            return
+        # Expected: HTTP 4xx from the permission tests and failed requests while offline.
+        if m.text.startswith("Failed to load resource") or "ERR_INTERNET_DISCONNECTED" in m.text:
+            expected_network.append(m.text)
+            return
+        console_problems.append("%s: %s" % (m.type, m.text))
     page.on("console", on_console)
     page.on("pageerror", lambda e: console_problems.append("pageerror: %s" % e))
     page.goto(BASE + hash_, wait_until="networkidle")
@@ -168,9 +173,9 @@ def run(browser):
     go(a, "#/admin/t/baru?p=" + lite)
     a.fill("#ed-tajuk-ms", "Hantar laporan ringkas")
     a.fill("#ed-ring-ms", "Hantar laporan pendek dari tapak.")
+    a.fill("#ed-vid-ms", "https://youtu.be/M7lc1UVf-VE")
     a.click("[data-form=adm-tut] [data-act=ltab][data-l=en]")
     a.fill("#ed-tajuk-en", "Send a quick report")
-    a.fill("#ed-vid-ms", "https://youtu.be/M7lc1UVf-VE")
     a.click("[data-form=adm-tut] [data-intent=save]")
     toast(a)
     a.wait_for_selector("[data-act=adm-step-edit].add-btn")
@@ -253,7 +258,8 @@ def run(browser):
 
     # ---------------- admin answers in the inbox ----------------
     go(a, "#/admin/kotak")
-    a.wait_for_selector(".inbox li")
+    a.click("[data-act=inbox-reload]")
+    a.wait_for_selector(".inbox li:has-text('Does this work offline?')", timeout=15000)
     a.click(".inbox li:has-text('Does this work offline?') [data-act=qa-answer]")
     a.fill("#qa-t", "Yes, the last copy stays on your phone.")
     a.click("[data-form=qa-text] [type=submit]")
@@ -287,8 +293,10 @@ def run(browser):
     check("Staf tidak nampak draf", s.locator("a[href='#/t/%s']" % tid).count() == 0 and s.locator("a.lesson").count() >= 1)
     err = e.evaluate("() => GEPApp.S.deleteProduk('a0000000-0000-4000-8000-000000000001').then(() => 'ok', e => e.code)")
     check("Editor disekat memadam produk", err == "permission" and psql("select count(*) from public.produk") == "3", err)
+    a.reload(wait_until="networkidle")
+    ready(a)
     go(a, "#/admin/t/" + tid)
-    a.wait_for_selector("[data-intent=terbit]")
+    a.wait_for_selector("[data-intent=terbit]", timeout=15000)
     a.click("[data-intent=terbit]")
     toast(a)
     check("Admin meluluskan suntingan editor", psql("select status from public.tutorial where id = '%s'" % tid) == "terbit")

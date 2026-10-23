@@ -64,7 +64,8 @@ create table if not exists public.langkah (
   susunan       integer not null default 0,
   teks_ms       text not null check (char_length(teks_ms) between 1 and 500),
   teks_en       text not null default '' check (char_length(teks_en) <= 500),
-  gambar_path   text not null default '' check (char_length(gambar_path) <= 300),
+  gambar_path   text not null default ''
+                check (gambar_path ~ '^(img/contoh/[a-z0-9-]{1,40}\.(jpg|png|webp)|[0-9a-f-]{36}/[A-Za-z0-9._-]{1,80})?$'),
   penanda       jsonb not null default '[]'::jsonb
                 check (jsonb_typeof(penanda) = 'array' and jsonb_array_length(penanda) <= 20),
   dicipta       timestamptz not null default now(),

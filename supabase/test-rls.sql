@@ -156,6 +156,8 @@ begin
     update public.tutorial set status = 'terbit' where id = t_pub;
     r := pg_temp.sebagai(u_edit, format('update public.profiles set peranan = %L where id = %L', 'admin', u_edit));
     hasil := hasil || array['Editor tidak boleh jadikan diri admin', case when (select peranan from public.profiles where id = u_edit) = 'editor' then 'LULUS' else 'GAGAL (' || r || ')' end];
+    r := pg_temp.sebagai(u_edit, format('insert into public.langkah (tutorial_id, susunan, teks_ms, gambar_path) values (%L, 9, %L, %L)', t_draf, 'Gambar luar', 'https://contoh.test/x.png'));
+    hasil := hasil || array['Pautan gambar luar ditolak', case when r like 'ralat:%' then 'LULUS' else 'GAGAL (' || r || ')' end];
     r := pg_temp.sebagai(u_edit, format('insert into storage.objects (bucket_id, name) values (%L, %L)', 'langkah', 'ujian/editor.jpg'));
     hasil := hasil || array['Editor boleh muat naik gambar', case when r = 'ok:1' then 'LULUS' else 'GAGAL (' || r || ')' end];
     r := pg_temp.sebagai(u_edit, 'select 1 from public.cadangan');
