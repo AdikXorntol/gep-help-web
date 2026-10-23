@@ -106,12 +106,13 @@
   app.refresh = refresh;
 
   // A link to something we don't have yet (e.g. just published elsewhere): fetch fresh data once
-  // before saying "not found".
+  // per visit to that link before saying "not found". Opening the link again tries again.
   var missTried = {};
+  var navSeq = 0;
   function tryFetchMissing(id) {
     if (!S || st.refreshing || st.offline) return !!st.refreshing;
-    if (missTried[id] && Date.now() - missTried[id] < 15000) return false;
-    missTried[id] = Date.now();
+    if (missTried[id] === navSeq) return false;
+    missTried[id] = navSeq;
     setTimeout(refresh, 0);
     return true;
   }
@@ -1191,6 +1192,7 @@
       else { st.loading = false; st.loadError = e; render(); }
     });
     window.addEventListener('hashchange', function () {
+      navSeq++;
       if (layers.length && !backPending) closeAllLayers();
       render();
       // Pick up changes made on other devices when the data is getting old.
