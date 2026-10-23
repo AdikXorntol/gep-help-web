@@ -16,7 +16,8 @@
   var USERS = {
     admin: { id: 'd0000000-0000-4000-8000-00000000000a', emel: 'admin@demo.gep', nama: 'Aina (Admin)', peranan: 'admin', bahasa: '' },
     editor: { id: 'd0000000-0000-4000-8000-00000000000e', emel: 'editor@demo.gep', nama: 'Hafiz (Editor)', peranan: 'editor', bahasa: '' },
-    staf: { id: 'd0000000-0000-4000-8000-00000000000s', emel: 'staf@demo.gep', nama: 'Kumar (Staf)', peranan: 'staf', bahasa: '' }
+    staf: { id: 'd0000000-0000-4000-8000-00000000000s', emel: 'staf@demo.gep', nama: 'Kumar (Staf)', peranan: 'staf', bahasa: '' },
+    pengawal: { id: 'd0000000-0000-4000-8000-00000000000b', emel: 'pengawal@demo.gep', nama: 'Ali (Pengawal)', peranan: 'pengawal', bahasa: '' }
   };
 
   function seed() {
@@ -28,13 +29,13 @@
         { id: P.lite, kod: 'LITE', nama_ms: 'GEP LITE', nama_en: 'GEP LITE', keterangan_ms: 'Versi ringan untuk daftar masuk dengan cepat.', keterangan_en: 'A lighter version for quick check-ins.', warna: '#2E9A63', susunan: 3 }
       ],
       tutorial: [], langkah: [], nota: [], kegemaran: [], ditonton: [], soalan: [], cadangan: [], laporan: [],
-      profiles: [clone(USERS.admin), clone(USERS.editor), clone(USERS.staf)]
+      profiles: [clone(USERS.admin), clone(USERS.editor), clone(USERS.staf), clone(USERS.pengawal)].map(function (u, i) { u.dicipta = daysAgo(90 - i * 20); return u; })
     };
     function tut(id, prod, n, ms, en, sms, sen, status, opts) {
       opts = opts || {};
       db.tutorial.push({
         id: id, produk_id: prod, tajuk_ms: ms, tajuk_en: en, ringkasan_ms: sms, ringkasan_en: sen,
-        video_url_ms: opts.video || '', video_url_en: opts.videoEn || opts.video || '', status: status, susunan: n,
+        video_url_ms: opts.video || '', video_url_en: opts.videoEn || opts.video || '', status: status, audiens: opts.aud || 'semua', susunan: n,
         dicipta_oleh: opts.by || USERS.admin.id, diterbit_pada: status === 'terbit' ? (opts.pub || daysAgo(40)) : null,
         dicipta: daysAgo(60 - n), dikemas_kini: daysAgo(3)
       });
@@ -61,7 +62,7 @@
     tut(T.app3, P.app, 3, 'Hantar laporan insiden', '', 'Buat dan hantar laporan insiden semasa rondaan.', '', 'terbit');
     step(T.app3, 1, 'Tekan butang Laporan di bawah skrin.', '', '', []);
     tut(T.ops1, P.ops, 1, 'Log masuk ke konsol GEP OPS', 'Sign in to the GEP OPS console',
-      'Masuk ke papan pemuka GEP OPS dengan akaun penyelia.', 'Open the GEP OPS dashboard with your supervisor account.', 'terbit');
+      'Masuk ke papan pemuka GEP OPS dengan akaun penyelia.', 'Open the GEP OPS dashboard with your supervisor account.', 'terbit', { aud: 'staf' });
     step(T.ops1, 1, 'Buka pautan konsol GEP OPS dalam pelayar.', 'Open the GEP OPS console link in your browser.', 'img/contoh/ops-1.jpg', []);
     step(T.ops1, 2, 'Masukkan ID penyelia dan kata laluan.', 'Enter your supervisor ID and password.', 'img/contoh/ops-2.jpg', [{ t: 'o', x: 50, y: 45, r: 16 }]);
     step(T.ops1, 3, 'Papan pemuka dibuka. Anda sedia memantau.', 'The dashboard opens. You are ready to monitor.', 'img/contoh/ops-3.jpg', []);
@@ -95,14 +96,18 @@
     function isAdmin() { return role() === 'admin'; }
     function isEditor() { return role() === 'admin' || role() === 'editor'; }
     function find(list, id) { return list.filter(function (r) { return r.id === id; })[0]; }
-    function canSeeTutorial(t) { return t && (t.status === 'terbit' && (S.me || !db.tetapan.wajib_log_masuk) || isEditor()); }
+    function isStaff() { return isEditor() || role() === 'staf'; }
+    function canSeeTutorial(t) {
+      return !!t && ((t.status === 'terbit' && (S.me || !db.tetapan.wajib_log_masuk) && (t.audiens !== 'staf' || isStaff())) || isEditor());
+    }
+    function canSeeId(tid) { return canSeeTutorial(find(db.tutorial, tid)); }
 
     S.init = function () { return Promise.resolve(); };
     S.onAuth = function (fn) { listeners.push(fn); };
 
     function login(u) {
       var p = find(db.profiles, u.id);
-      if (!p) { p = clone(u); db.profiles.push(p); }
+      if (!p) { p = clone(u); p.dicipta = p.dicipta || now(); db.profiles.push(p); }
       S.me = clone(p);
       emit('signed-in');
     }
@@ -112,7 +117,7 @@
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return fail('auth-email');
       if (!password) return fail('auth-wrong');
       var known = db.profiles.filter(function (p) { return p.emel === email; })[0];
-      login(known || { id: U.uid(), emel: email, nama: email.split('@')[0], peranan: 'staf', bahasa: '' });
+      login(known || { id: U.uid(), emel: email, nama: email.split('@')[0], peranan: 'pengawal', bahasa: '' });
       return later(true);
     };
     S.signUp = function (email, password, nama, bahasa) {
@@ -120,7 +125,7 @@
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return fail('auth-email');
       if (String(password || '').length < 6) return fail('auth-weak');
       if (db.profiles.some(function (p) { return p.emel === email; })) return fail('auth-exists');
-      login({ id: U.uid(), emel: email, nama: nama || '', peranan: 'staf', bahasa: bahasa || 'ms' });
+      login({ id: U.uid(), emel: email, nama: nama || '', peranan: 'pengawal', bahasa: bahasa || 'ms' });
       return later({ needConfirm: false });
     };
     S.signOut = function () { S.me = null; emit('signed-out'); return later(true); };
@@ -182,7 +187,7 @@
       });
     }
     function contentChanged(a, b) {
-      return ['tajuk_ms', 'tajuk_en', 'ringkasan_ms', 'ringkasan_en', 'video_url_ms', 'video_url_en', 'produk_id'].some(function (k) { return b[k] !== undefined && a[k] !== b[k]; });
+      return ['tajuk_ms', 'tajuk_en', 'ringkasan_ms', 'ringkasan_en', 'video_url_ms', 'video_url_en', 'produk_id', 'audiens'].some(function (k) { return b[k] !== undefined && a[k] !== b[k]; });
     }
     var YT = /^https:\/\/(www\.|m\.)?(youtube\.com|youtu\.be)\/[A-Za-z0-9_?=&/.%-]{1,200}$/;
     S.saveTutorial = function (t) {
@@ -197,7 +202,9 @@
         row = { id: U.uid(), dicipta: now(), dicipta_oleh: S.me.id, status: 'draf', diterbit_pada: null, susunan: 99 };
         db.tutorial.push(row);
       }
-      ['produk_id', 'tajuk_ms', 'tajuk_en', 'ringkasan_ms', 'ringkasan_en', 'video_url_ms', 'video_url_en', 'susunan'].forEach(function (k) { if (t[k] !== undefined) row[k] = t[k]; });
+      if (t.audiens !== undefined && t.audiens !== 'semua' && t.audiens !== 'staf') return fail('invalid');
+      ['produk_id', 'tajuk_ms', 'tajuk_en', 'ringkasan_ms', 'ringkasan_en', 'video_url_ms', 'video_url_en', 'audiens', 'susunan'].forEach(function (k) { if (t[k] !== undefined) row[k] = t[k]; });
+      if (!row.audiens) row.audiens = 'semua';
       if (isAdmin()) {
         if (t.status) row.status = t.status;
       } else {
@@ -272,14 +279,14 @@
       return later(m);
     };
     S.saveNota = function (tid, teks) {
-      if (!S.me) return fail('permission');
+      if (!S.me || !canSeeId(tid)) return fail('permission');
       teks = String(teks || '').trim().slice(0, 2000);
       db.nota = db.nota.filter(function (n) { return !(n.user_id === S.me.id && n.tutorial_id === tid); });
       if (teks) db.nota.push({ user_id: S.me.id, tutorial_id: tid, teks: teks, dikemas_kini: now() });
       return later(true);
     };
     S.setKegemaran = function (tid, on) {
-      if (!S.me) return fail('permission');
+      if (!S.me || (on && !canSeeId(tid))) return fail('permission');
       db.kegemaran = db.kegemaran.filter(function (k) { return !(k.user_id === S.me.id && k.tutorial_id === tid); });
       if (on) db.kegemaran.push({ user_id: S.me.id, tutorial_id: tid, dicipta: now() });
       return later(true);
@@ -292,10 +299,11 @@
 
     S.listSoalan = function (tid) {
       if (!S.me) return fail('permission');
+      if (!canSeeId(tid)) return later([]);
       return later(db.soalan.filter(function (q) { return q.tutorial_id === tid; }).sort(function (a, b) { return String(a.dicipta).localeCompare(String(b.dicipta)); }));
     };
     S.addSoalan = function (tid, teks) {
-      if (!S.me) return fail('permission');
+      if (!S.me || !canSeeId(tid)) return fail('permission');
       teks = String(teks || '').trim();
       if (!teks) return fail('invalid');
       var row = { id: U.uid(), tutorial_id: tid, user_id: S.me.id, nama: S.me.nama || S.me.emel.split('@')[0], teks: teks.slice(0, 1000), jawapan: '', dijawab_pada: null, dicipta: now(), dikemas_kini: now() };
@@ -339,7 +347,7 @@
       return later(db.cadangan.filter(function (c) { return c.user_id === S.me.id; }).reverse());
     };
     S.addLaporan = function (l) {
-      if (!S.me) return fail('permission');
+      if (!S.me || !canSeeId(l.tutorial_id)) return fail('permission');
       var row = { id: U.uid(), user_id: S.me.id, nama: S.me.nama || S.me.emel.split('@')[0], tutorial_id: l.tutorial_id, jenis: l.jenis || 'lain', butiran: String(l.butiran || '').trim().slice(0, 1000), status: 'baru', dicipta: now(), dikemas_kini: now() };
       db.laporan.push(row);
       return later(row);

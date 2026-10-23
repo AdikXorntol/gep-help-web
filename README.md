@@ -11,7 +11,8 @@ Selagi `web/config.js` kosong, website berjalan dalam **mod demo** (data contoh 
 ## Apa yang ada
 - Tutorial dengan langkah bernombor, gambar (boleh dizum) dan penanda merah (bulatan/anak panah), mod langkah demi langkah, dan pautan video YouTube.
 - Dwibahasa BM/EN: butang **BM | EN** di setiap halaman; kandungan tutorial juga ada medan BM dan EN.
-- Staf: nota peribadi, kegemaran, tanda "Dah faham", soalan/komen, cadang tutorial, laporkan masalah.
+- Peranan: **Pengawal** (lalai bila daftar), **Staf**, **Editor**, **Admin**. Tutorial boleh ditanda *Staf sahaja*; pengawal tidak nampak tutorial itu (disekat dalam pangkalan data, bukan sekadar disorok).
+- Pengawal dan staf: nota peribadi, kegemaran, tanda "Dah faham", soalan/komen, cadang tutorial, laporkan masalah.
 - Admin: tambah/edit/padam/susun produk, tutorial dan langkah; muat naik gambar (dikecilkan automatik); kotak masuk; urus peranan pengguna; tetapan WhatsApp dan "wajib log masuk".
 - Editor: tambah dan edit tutorial sebagai draf; admin yang menerbitkan.
 - Boleh dipasang ke skrin utama telefon (PWA) dan dibuka semula tanpa internet (salinan terakhir).

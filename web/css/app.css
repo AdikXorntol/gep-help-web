@@ -90,6 +90,7 @@ svg { display: block; }
 .banner.off { background: #fff4d1; border: 1px solid #f0d27a; }
 .banner.demo { background: var(--info-bg); border: 1px solid #bcd0ef; }
 .banner.draft { background: #fff4d1; border: 1px dashed #c99700; }
+.banner.staff { background: var(--info-bg); border: 1px solid #bcd0ef; color: var(--ink); }
 .banner a { margin-left: auto; font-weight: 700; white-space: nowrap; padding: 10px 4px; }
 
 /* ---------- sections, lists ---------- */
@@ -131,6 +132,7 @@ svg { display: block; }
 .c-draft { background: #fff1c2; color: #6b4e00; padding: 0 7px; border-radius: 6px; font-weight: 700; }
 .c-new { background: var(--ink); color: var(--signal); padding: 0 7px; border-radius: 6px; font-weight: 700; }
 .c-done { color: var(--ok); font-weight: 700; }
+.c-staff { background: var(--info-bg); color: var(--blue); padding: 0 7px; border-radius: 6px; font-weight: 700; }
 .untr { display: inline-block; font-size: 0.72rem; font-weight: 700; color: #6b4e00; background: #fff1c2; border-radius: 6px; padding: 1px 6px; vertical-align: 2px; white-space: nowrap; }
 
 .cont { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; background: var(--ink); color: #fff; text-decoration: none; min-height: 72px; }
@@ -333,6 +335,7 @@ svg { display: block; }
 .role-chip, .st-chip { display: inline-block; font-size: 0.76rem; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: var(--soft); border: 1px solid var(--line); white-space: nowrap; }
 .role-chip.r-admin { background: var(--ink); color: var(--signal); border-color: var(--ink); }
 .role-chip.r-editor { background: var(--info-bg); color: var(--blue); border-color: #bcd0ef; }
+.role-chip.r-pengawal { background: #fff1c2; color: #6b4e00; border-color: #f0d27a; }
 .st-chip.s-baru { background: #fff1c2; color: #6b4e00; border-color: #ecd27c; }
 .st-chip.s-selesai, .st-chip.s-terbit { background: var(--ok-bg); color: var(--ok); border-color: #a9d8b8; }
 .st-chip.s-ditolak { background: var(--danger-bg); color: var(--danger); border-color: #efbcb6; }

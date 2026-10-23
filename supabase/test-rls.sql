@@ -19,6 +19,7 @@ declare
   p_id    uuid := gen_random_uuid();
   t_pub   uuid := gen_random_uuid();
   t_draf  uuid := gen_random_uuid();
+  t_staf  uuid := gen_random_uuid();
   r       text;
   v       text;
   wajib   boolean;
@@ -66,10 +67,11 @@ begin
 
     hasil := hasil || array['Profil dicipta automatik semasa daftar',
       case when (select count(*) from public.profiles where id in (u_admin, u_edit, u_staf, u_lain)) = 4 then 'LULUS' else 'GAGAL' end];
-    hasil := hasil || array['Pengguna baharu menjadi staf',
-      case when (select peranan from public.profiles where id = u_staf) = 'staf' then 'LULUS' else 'GAGAL' end];
+    hasil := hasil || array['Pengguna baharu menjadi pengawal',
+      case when (select peranan from public.profiles where id = u_staf) = 'pengawal' then 'LULUS' else 'GAGAL' end];
 
     update public.profiles set peranan = 'admin' where id = u_admin;
+    update public.profiles set peranan = 'staf' where id = u_staf;
     update public.profiles set peranan = 'editor' where id = u_edit;
 
     -- Data ujian
@@ -77,6 +79,9 @@ begin
     insert into public.tutorial (id, produk_id, tajuk_ms, status) values (t_pub, p_id, 'Tutorial terbit ujian', 'terbit');
     insert into public.tutorial (id, produk_id, tajuk_ms, status) values (t_draf, p_id, 'Tutorial draf ujian', 'draf');
     insert into public.langkah (tutorial_id, susunan, teks_ms) values (t_pub, 1, 'Langkah ujian');
+    insert into public.tutorial (id, produk_id, tajuk_ms, status, audiens) values (t_staf, p_id, 'Tutorial staf sahaja', 'terbit', 'staf');
+    insert into public.langkah (tutorial_id, susunan, teks_ms) values (t_staf, 1, 'Langkah staf sahaja');
+    insert into public.soalan (tutorial_id, user_id, teks) values (t_staf, u_staf, 'Soalan dalam tutorial staf');
     insert into public.nota (user_id, tutorial_id, teks) values (u_lain, t_pub, 'Nota peribadi orang lain');
 
     select wajib_log_masuk into wajib from public.tetapan where id = 1;
@@ -89,6 +94,10 @@ begin
     hasil := hasil || array['Tetamu tidak nampak draf', case when r = 'ok:0' then 'LULUS' else 'GAGAL (' || r || ')' end];
     r := pg_temp.sebagai(null, format('select 1 from public.langkah where tutorial_id = %L', t_pub));
     hasil := hasil || array['Tetamu boleh lihat langkah tutorial terbit', case when r = 'ok:1' then 'LULUS' else 'GAGAL (' || r || ')' end];
+    r := pg_temp.sebagai(null, format('select 1 from public.tutorial where id = %L', t_staf));
+    hasil := hasil || array['Tetamu tidak nampak tutorial staf sahaja', case when r = 'ok:0' then 'LULUS' else 'GAGAL (' || r || ')' end];
+    r := pg_temp.sebagai(null, format('select 1 from public.langkah where tutorial_id = %L', t_staf));
+    hasil := hasil || array['Tetamu tidak nampak langkah tutorial staf', case when r = 'ok:0' then 'LULUS' else 'GAGAL (' || r || ')' end];
     r := pg_temp.sebagai(null, format('insert into public.tutorial (produk_id, tajuk_ms) values (%L, %L)', p_id, 'Cubaan tetamu'));
     hasil := hasil || array['Tetamu tidak boleh tambah tutorial', case when r like 'ralat:%' then 'LULUS' else 'GAGAL (' || r || ')' end];
     r := pg_temp.sebagai(null, 'select 1 from public.profiles');
@@ -96,7 +105,31 @@ begin
     r := pg_temp.sebagai(null, 'select 1 from public.nota');
     hasil := hasil || array['Tetamu tidak boleh baca nota', case when r like 'ralat:%' or r = 'ok:0' then 'LULUS' else 'GAGAL (' || r || ')' end];
 
+    -- ---------------- Pengawal (u_lain) ----------------
+    r := pg_temp.sebagai(u_lain, format('select 1 from public.tutorial where id = %L', t_pub));
+    hasil := hasil || array['Pengawal nampak tutorial untuk semua', case when r = 'ok:1' then 'LULUS' else 'GAGAL (' || r || ')' end];
+    r := pg_temp.sebagai(u_lain, format('select 1 from public.tutorial where id = %L', t_staf));
+    hasil := hasil || array['Pengawal tidak nampak tutorial staf sahaja', case when r = 'ok:0' then 'LULUS' else 'GAGAL (' || r || ')' end];
+    r := pg_temp.sebagai(u_lain, format('select 1 from public.langkah where tutorial_id = %L', t_staf));
+    hasil := hasil || array['Pengawal tidak nampak langkah tutorial staf', case when r = 'ok:0' then 'LULUS' else 'GAGAL (' || r || ')' end];
+    r := pg_temp.sebagai(u_lain, format('select 1 from public.soalan where tutorial_id = %L', t_staf));
+    hasil := hasil || array['Pengawal tidak nampak soalan dalam tutorial staf', case when r = 'ok:0' then 'LULUS' else 'GAGAL (' || r || ')' end];
+    r := pg_temp.sebagai(u_lain, format('insert into public.soalan (tutorial_id, teks) values (%L, %L)', t_staf, 'Cubaan pengawal'));
+    hasil := hasil || array['Pengawal tidak boleh bertanya dalam tutorial staf', case when r like 'ralat:%' then 'LULUS' else 'GAGAL (' || r || ')' end];
+    r := pg_temp.sebagai(u_lain, format('insert into public.nota (tutorial_id, teks) values (%L, %L)', t_staf, 'Cubaan pengawal'));
+    hasil := hasil || array['Pengawal tidak boleh simpan nota pada tutorial staf', case when r like 'ralat:%' then 'LULUS' else 'GAGAL (' || r || ')' end];
+    r := pg_temp.sebagai(u_lain, format('insert into public.laporan (tutorial_id, butiran) values (%L, %L)', t_staf, 'Cubaan pengawal'));
+    hasil := hasil || array['Pengawal tidak boleh lapor tutorial staf', case when r like 'ralat:%' then 'LULUS' else 'GAGAL (' || r || ')' end];
+    r := pg_temp.sebagai(u_lain, format('update public.profiles set peranan = %L where id = %L', 'staf', u_lain));
+    hasil := hasil || array['Pengawal tidak boleh jadikan diri staf', case when (select peranan from public.profiles where id = u_lain) = 'pengawal' then 'LULUS' else 'GAGAL (' || r || ')' end];
+    r := pg_temp.sebagai(u_lain, format('insert into public.ditonton (tutorial_id) values (%L)', t_pub));
+    hasil := hasil || array['Pengawal boleh tanda tutorial dah faham', case when r = 'ok:1' then 'LULUS' else 'GAGAL (' || r || ')' end];
+
     -- ---------------- Staf ----------------
+    r := pg_temp.sebagai(u_staf, format('select 1 from public.tutorial where id = %L', t_staf));
+    hasil := hasil || array['Staf nampak tutorial staf sahaja', case when r = 'ok:1' then 'LULUS' else 'GAGAL (' || r || ')' end];
+    r := pg_temp.sebagai(u_staf, format('select 1 from public.langkah where tutorial_id = %L', t_staf));
+    hasil := hasil || array['Staf nampak langkah tutorial staf', case when r = 'ok:1' then 'LULUS' else 'GAGAL (' || r || ')' end];
     r := pg_temp.sebagai(u_staf, format('update public.tutorial set tajuk_ms = %L where id = %L', 'Diubah staf', t_pub));
     hasil := hasil || array['Staf tidak boleh edit tutorial', case when (r = 'ok:0' or r like 'ralat:%') and (select tajuk_ms from public.tutorial where id = t_pub) = 'Tutorial terbit ujian' then 'LULUS' else 'GAGAL (' || r || ')' end];
     r := pg_temp.sebagai(u_staf, format('select 1 from public.tutorial where id = %L', t_draf));
@@ -128,7 +161,7 @@ begin
     hasil := hasil || array['Staf boleh hantar cadangan (status kekal baru)',
       case when r = 'ok:1' and (select status from public.cadangan where user_id = u_staf) = 'baru' then 'LULUS' else 'GAGAL (' || r || ')' end];
     r := pg_temp.sebagai(u_lain, 'select 1 from public.cadangan');
-    hasil := hasil || array['Staf lain tidak nampak cadangan orang lain', case when r = 'ok:0' then 'LULUS' else 'GAGAL (' || r || ')' end];
+    hasil := hasil || array['Pengguna lain tidak nampak cadangan orang lain', case when r = 'ok:0' then 'LULUS' else 'GAGAL (' || r || ')' end];
     r := pg_temp.sebagai(u_staf, format('insert into public.laporan (tutorial_id, jenis, butiran) values (%L, %L, %L)', t_pub, 'video', 'Video tak main'));
     hasil := hasil || array['Staf boleh laporkan masalah', case when r = 'ok:1' then 'LULUS' else 'GAGAL (' || r || ')' end];
     r := pg_temp.sebagai(u_staf, 'update public.tetapan set wajib_log_masuk = true where id = 1');
@@ -154,6 +187,12 @@ begin
     hasil := hasil || array['Langkah baharu editor menjadikan tutorial draf',
       case when r = 'ok:1' and (select status from public.tutorial where id = t_pub) = 'draf' then 'LULUS' else 'GAGAL (' || r || ')' end];
     update public.tutorial set status = 'terbit' where id = t_pub;
+    r := pg_temp.sebagai(u_edit, format('update public.tutorial set audiens = %L where id = %L', 'staf', t_pub));
+    hasil := hasil || array['Editor menukar siapa boleh lihat menjadikan tutorial draf',
+      case when r = 'ok:1' and (select status from public.tutorial where id = t_pub) = 'draf' then 'LULUS' else 'GAGAL (' || r || ')' end];
+    update public.tutorial set status = 'terbit', audiens = 'semua' where id = t_pub;
+    r := pg_temp.sebagai(u_edit, format('select 1 from public.tutorial where id = %L', t_staf));
+    hasil := hasil || array['Editor nampak tutorial staf sahaja', case when r = 'ok:1' then 'LULUS' else 'GAGAL (' || r || ')' end];
     r := pg_temp.sebagai(u_edit, format('update public.profiles set peranan = %L where id = %L', 'admin', u_edit));
     hasil := hasil || array['Editor tidak boleh jadikan diri admin', case when (select peranan from public.profiles where id = u_edit) = 'editor' then 'LULUS' else 'GAGAL (' || r || ')' end];
     r := pg_temp.sebagai(u_edit, format('insert into public.langkah (tutorial_id, susunan, teks_ms, gambar_path) values (%L, 9, %L, %L)', t_draf, 'Gambar luar', 'https://contoh.test/x.png'));
@@ -182,6 +221,12 @@ begin
     hasil := hasil || array['Bila log masuk diwajibkan, tetamu tidak nampak tutorial', case when r = 'ok:0' then 'LULUS' else 'GAGAL (' || r || ')' end];
     r := pg_temp.sebagai(u_staf, format('select 1 from public.tutorial where id = %L', t_pub));
     hasil := hasil || array['Bila log masuk diwajibkan, staf masih nampak tutorial', case when r = 'ok:1' then 'LULUS' else 'GAGAL (' || r || ')' end];
+    r := pg_temp.sebagai(u_admin, format('update public.profiles set peranan = %L where id = %L', 'pengawal', u_lain));
+    hasil := hasil || array['Admin boleh tukar pengguna menjadi pengawal', case when (select peranan from public.profiles where id = u_lain) = 'pengawal' then 'LULUS' else 'GAGAL (' || r || ')' end];
+    r := pg_temp.sebagai(u_lain, format('select 1 from public.tutorial where id = %L', t_pub));
+    hasil := hasil || array['Bila log masuk diwajibkan, pengawal nampak tutorial untuk semua', case when r = 'ok:1' then 'LULUS' else 'GAGAL (' || r || ')' end];
+    r := pg_temp.sebagai(u_lain, format('select 1 from public.tutorial where id = %L', t_staf));
+    hasil := hasil || array['Bila log masuk diwajibkan, pengawal tetap tidak nampak tutorial staf', case when r = 'ok:0' then 'LULUS' else 'GAGAL (' || r || ')' end];
     update public.tetapan set wajib_log_masuk = coalesce(wajib, false) where id = 1;
 
     -- Batalkan semua perubahan ujian

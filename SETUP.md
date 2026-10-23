@@ -85,10 +85,21 @@ Siap! Anda boleh mula menambah tutorial.
 
 - **Tambah tutorial:** Panel admin → Kandungan → *Tambah tutorial* → isi tajuk (BM wajib, EN pilihan) → Simpan → *Tambah langkah* → pilih screenshot → ketik pada gambar untuk letak bulatan/anak panah → tulis arahan → Simpan → **Terbitkan**.
 - **Video:** muat naik ke YouTube sebagai *Unlisted*, salin pautan, tampal di ruang *Pautan video YouTube*.
-- **Staf baharu:** minta mereka daftar sendiri di website. Mereka menjadi *Staf* secara automatik.
-- **Editor:** Panel admin → Pengguna → tukar peranan ke *Editor*. Editor boleh tambah/ubah tutorial; perubahan menjadi draf sehingga admin menerbitkannya.
-- **Tutorial untuk staf sahaja:** Panel admin → Tetapan → hidupkan *Wajib log masuk*.
+- **Pengguna baharu:** minta mereka daftar sendiri di website. Mereka menjadi *Pengawal* secara automatik.
+- **Peranan** (Panel admin → Pengguna):
+  - *Pengawal*: tengok tutorial untuk semua sahaja.
+  - *Staf*: tengok semua tutorial, termasuk yang ditanda *Staf sahaja*.
+  - *Editor*: seperti staf, dan boleh tambah/ubah tutorial; perubahan menjadi draf sehingga admin menerbitkannya.
+  - *Admin*: urus semua.
+- **Tutorial untuk staf sahaja:** semasa edit tutorial, pilih *Siapa boleh tengok tutorial ini? → Staf sahaja*. Pengawal tidak nampak tutorial itu, langkahnya atau soalan di dalamnya, walaupun mereka ada pautannya. Produk yang hanya ada tutorial staf disembunyikan daripada pengawal.
+- **Sembunyikan semua tutorial daripada orang yang belum log masuk:** Panel admin → Tetapan → hidupkan *Wajib log masuk*.
 - **Butang WhatsApp:** Panel admin → Tetapan → nombor WhatsApp support (contoh `60123456789`).
+
+## Bila website dikemas kini
+
+Kadang-kadang ciri baharu memerlukan perubahan pada pangkalan data. Bila diberitahu, buka Supabase → **SQL Editor** → **New query**, tampal **[supabase/schema.sql](supabase/schema.sql)** terbaru → **Run**. Fail ini selamat dijalankan semula: data, pengguna dan tutorial anda tidak hilang, dan tutorial contoh tidak muncul semula.
+
+Kalau website memaparkan *"Pangkalan data perlu dikemas kini"*, itu tandanya langkah ini belum dibuat.
 
 ## Perkara penting
 

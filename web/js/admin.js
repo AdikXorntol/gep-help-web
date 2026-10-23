@@ -6,7 +6,7 @@
   function S() { return app.S; }
 
   var adm = { filter: 'semua', inbox: null, inboxTab: 'soalan', users: null, orphans: null, ftab: 'ms', loadingInbox: false, loadingUsers: false };
-  var VERSION = '1.0.0';
+  var VERSION = '1.1.0';
 
   function langComplete(tu, lang) {
     if (!String(tu['tajuk_' + lang] || '').trim()) return false;
@@ -118,7 +118,7 @@
           return '<li data-id="' + esc(tu.id) + '">' +
             (sortable ? '<button type="button" class="grip" aria-label="' + esc(t('admin.drag')) + '" title="' + esc(t('admin.drag')) + '">' + svg('grip') + '</button>' : '') +
             '<a class="adm-row" href="#/admin/t/' + esc(tu.id) + '"><span class="l-title">' + esc(p2.text) + '</span>' +
-            '<span class="chips">' + statusChip(tu.status) + trChips(tu) + '<span>' + esc(I.tn('tutorial.stepCount', (st.steps[tu.id] || []).length)) + '</span></span></a>' +
+            '<span class="chips">' + statusChip(tu.status) + (H.staffOnly(tu) ? '<span class="c-staff">' + svg('lock') + esc(t('aud.badge')) + '</span>' : '') + trChips(tu) + '<span>' + esc(I.tn('tutorial.stepCount', (st.steps[tu.id] || []).length)) + '</span></span></a>' +
             (sortable ? '<span class="updown"><button type="button" class="mini icon" data-act="adm-tut-move" data-id="' + esc(tu.id) + '" data-dir="-1" aria-label="' + esc(t('admin.moveUp')) + '"' + (i === 0 ? ' disabled' : '') + '>' + svg('up') + '</button>' +
               '<button type="button" class="mini icon" data-act="adm-tut-move" data-id="' + esc(tu.id) + '" data-dir="1" aria-label="' + esc(t('admin.moveDown')) + '"' + (i === list.length - 1 ? ' disabled' : '') + '>' + svg('down') + '</button></span>' : '') +
             '</li>';
@@ -304,6 +304,9 @@
     h += '<form class="box" data-form="adm-tut" data-id="' + esc(tu ? tu.id : '') + '" novalidate>' +
       '<div class="field"><label for="ed-produk">' + esc(t('suggest.product')) + '</label><select id="ed-produk" name="produk_id">' +
       st.cat.produk.map(function (p) { return '<option value="' + esc(p.id) + '"' + (p.id === pid ? ' selected' : '') + '>' + esc(H.txt(p, 'nama')) + '</option>'; }).join('') + '</select></div>' +
+      '<div class="field"><label for="ed-audiens">' + esc(t('aud.label')) + '</label><select id="ed-audiens" name="audiens" aria-describedby="ed-audiens-hint">' +
+      ['semua', 'staf'].map(function (a) { return '<option value="' + a + '"' + ((tu ? tu.audiens || 'semua' : 'semua') === a ? ' selected' : '') + '>' + esc(t('aud.' + a)) + '</option>'; }).join('') +
+      '</select><small class="hint" id="ed-audiens-hint">' + esc(t('aud.hint')) + '</small></div>' +
       langTabs('ed', lt) +
       ['ms', 'en'].map(function (l) {
         var L = l === 'ms' ? 'BM' : 'EN';
@@ -359,7 +362,7 @@
   app.FORM['adm-tut'] = function (f) {
     var err = f.querySelector('.err');
     var intent = submitIntent; submitIntent = 'save';
-    var row = { produk_id: f.produk_id.value };
+    var row = { produk_id: f.produk_id.value, audiens: f.audiens.value === 'staf' ? 'staf' : 'semua' };
     ['ms', 'en'].forEach(function (l) {
       row['tajuk_' + l] = f['tajuk_' + l].value.trim();
       row['ringkasan_' + l] = f['ringkasan_' + l].value.trim();
@@ -646,9 +649,9 @@
     return '<p class="muted">' + esc(t('users.intro')) + '</p><ul class="users">' + adm.users.map(function (u) {
       var self = H.me() && u.id === H.me().id;
       return '<li class="box"><div class="grow"><b>' + esc(u.nama || u.emel.split('@')[0]) + (self ? ' <span class="muted">(' + esc(t('users.you')) + ')</span>' : '') + '</b>' +
-        '<span class="muted u-mail">' + esc(u.emel) + '</span><span class="muted">' + esc(t('users.joined', { date: U.fmtDate(u.dicipta, I.lang) })) + '</span></div>' +
+        '<span class="muted u-mail">' + esc(u.emel) + '</span>' + (u.dicipta ? '<span class="muted">' + esc(t('users.joined', { date: U.fmtDate(u.dicipta, I.lang) })) + '</span>' : '') + '</div>' +
         '<label class="vh" for="role-' + esc(u.id) + '">' + esc(t('users.role')) + '</label>' +
-        '<select id="role-' + esc(u.id) + '" data-role-for="' + esc(u.id) + '">' + ['staf', 'editor', 'admin'].map(function (r) {
+        '<select id="role-' + esc(u.id) + '" data-role-for="' + esc(u.id) + '">' + ['pengawal', 'staf', 'editor', 'admin'].map(function (r) {
           return '<option value="' + r + '"' + (u.peranan === r ? ' selected' : '') + '>' + esc(t('role.' + r)) + '</option>';
         }).join('') + '</select></li>';
     }).join('') + '</ul><p class="note-box">' + svg('info') + esc(t('users.note')) + '</p>';

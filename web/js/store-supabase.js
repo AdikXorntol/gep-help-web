@@ -17,7 +17,7 @@
   function classify(err) {
     if (!err) return StoreError('unknown');
     // Our own codes pass through; Supabase codes such as 'invalid_credentials' are mapped below.
-    if (err.code && /^(network|permission|invalid|notfound|unknown|last-admin|config|auth-[a-z]+|image-[a-z]+)$/.test(err.code) && !err.details && !err.hint) return err;
+    if (err.code && /^(network|permission|invalid|notfound|unknown|last-admin|config|db-update|auth-[a-z]+|image-[a-z]+)$/.test(err.code) && !err.details && !err.hint) return err;
     if (U.isNetworkError(err)) return StoreError('network', err);
     var msg = String(err.message || '');
     var code = String(err.code || '');
@@ -33,6 +33,8 @@
     if (/rate limit|too many|security purposes/i.test(msg) || status === 429) return StoreError('auth-rate', err);
     if (/invalid.*email|email.*invalid|unable to validate email/i.test(msg)) return StoreError('auth-email', err);
     if (/signups? not allowed|signup.*disabled/i.test(msg)) return StoreError('auth-closed', err);
+    // The website is newer than the database (schema.sql not run again yet).
+    if (code === 'PGRST204' || /could not find the '[^']+' column|column "?[a-z_]+"? (of relation "?[a-z_]+"? )?does not exist/i.test(msg)) return StoreError('db-update', err);
     if (code === '42501' || code === 'PGRST116' || /row-level security|permission denied|not authorized|unauthorized/i.test(msg) || status === 401 || status === 403) return StoreError('permission', err);
     if (code === '23514' || code === '23502' || code === '22P02' || code === '23505' || /violates check|invalid input/i.test(msg)) return StoreError('invalid', err);
     if (/mime type|payload too large|exceeded the maximum allowed size/i.test(msg) || status === 413 || status === 415) return StoreError('image-size', err);
@@ -77,7 +79,7 @@
           id: user.id,
           emel: p.emel || user.email || '',
           nama: p.nama || '',
-          peranan: p.peranan || 'staf',
+          peranan: p.peranan || 'pengawal',
           bahasa: p.bahasa === 'en' ? 'en' : (p.bahasa === 'ms' ? 'ms' : '')
         };
         if (!res.error) U.local.set('gep_profile_' + user.id, S.me);
@@ -206,7 +208,7 @@
     };
 
     var PRODUK_COLS = ['kod', 'nama_ms', 'nama_en', 'keterangan_ms', 'keterangan_en', 'warna', 'susunan'];
-    var TUTORIAL_COLS = ['produk_id', 'tajuk_ms', 'tajuk_en', 'ringkasan_ms', 'ringkasan_en', 'video_url_ms', 'video_url_en', 'status', 'susunan'];
+    var TUTORIAL_COLS = ['produk_id', 'tajuk_ms', 'tajuk_en', 'ringkasan_ms', 'ringkasan_en', 'video_url_ms', 'video_url_en', 'status', 'audiens', 'susunan'];
     var LANGKAH_COLS = ['tutorial_id', 'susunan', 'teks_ms', 'teks_en', 'gambar_path', 'gambar_lebar', 'gambar_tinggi', 'penanda'];
     function pickCols(obj, cols) {
       var o = {};

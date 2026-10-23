@@ -14,7 +14,7 @@ create table if not exists public.profiles (
   id            uuid primary key references auth.users (id) on delete cascade,
   emel          text not null default '',
   nama          text not null default '' check (char_length(nama) <= 80),
-  peranan       text not null default 'staf' check (peranan in ('admin', 'editor', 'staf')),
+  peranan       text not null default 'pengawal' check (peranan in ('admin', 'editor', 'staf', 'pengawal')),
   bahasa        text not null default 'ms' check (bahasa in ('ms', 'en')),
   dicipta       timestamptz not null default now(),
   dikemas_kini  timestamptz not null default now()
@@ -50,12 +50,22 @@ create table if not exists public.tutorial (
   video_url_ms   text not null default '' check (video_url_ms = '' or video_url_ms ~ '^https://(www\.|m\.)?(youtube\.com|youtu\.be)/[A-Za-z0-9_?=&/.%-]{1,200}$'),
   video_url_en   text not null default '' check (video_url_en = '' or video_url_en ~ '^https://(www\.|m\.)?(youtube\.com|youtu\.be)/[A-Za-z0-9_?=&/.%-]{1,200}$'),
   status         text not null default 'draf' check (status in ('draf', 'terbit')),
+  audiens        text not null default 'semua' check (audiens in ('semua', 'staf')),
   susunan        integer not null default 0,
   dicipta_oleh   uuid references auth.users (id) on delete set null,
   diterbit_pada  timestamptz,
   dicipta        timestamptz not null default now(),
   dikemas_kini   timestamptz not null default now()
 );
+-- Kemas kini untuk projek sedia ada (selamat dijalankan semula):
+-- peranan 'pengawal' (lalai untuk pendaftaran baharu) dan tutorial untuk staf sahaja.
+alter table public.profiles drop constraint if exists profiles_peranan_check;
+alter table public.profiles add constraint profiles_peranan_check check (peranan in ('admin', 'editor', 'staf', 'pengawal'));
+alter table public.profiles alter column peranan set default 'pengawal';
+alter table public.tutorial add column if not exists audiens text not null default 'semua';
+alter table public.tutorial drop constraint if exists tutorial_audiens_check;
+alter table public.tutorial add constraint tutorial_audiens_check check (audiens in ('semua', 'staf'));
+
 create index if not exists tutorial_produk_idx on public.tutorial (produk_id, susunan);
 
 create table if not exists public.langkah (
@@ -154,6 +164,11 @@ as $$ select public.peranan_saya() = 'admin'; $$;
 create or replace function public.ialah_penyunting()
 returns boolean language sql stable security definer set search_path = ''
 as $$ select public.peranan_saya() in ('admin', 'editor'); $$;
+
+-- Boleh lihat tutorial 'staf sahaja': staf, editor dan admin (bukan pengawal atau tetamu)
+create or replace function public.ialah_staf()
+returns boolean language sql stable security definer set search_path = ''
+as $$ select public.peranan_saya() in ('admin', 'editor', 'staf'); $$;
 
 create or replace function public.wajib_log_masuk()
 returns boolean language sql stable security definer set search_path = ''
@@ -264,7 +279,7 @@ begin
       if new.tajuk_ms is distinct from old.tajuk_ms or new.tajuk_en is distinct from old.tajuk_en
          or new.ringkasan_ms is distinct from old.ringkasan_ms or new.ringkasan_en is distinct from old.ringkasan_en
          or new.video_url_ms is distinct from old.video_url_ms or new.video_url_en is distinct from old.video_url_en
-         or new.produk_id is distinct from old.produk_id then
+         or new.produk_id is distinct from old.produk_id or new.audiens is distinct from old.audiens then
         new.status := 'draf';
       end if;
     end if;
@@ -398,9 +413,9 @@ grant select, insert, update, delete on public.nota, public.kegemaran, public.di
   public.soalan, public.cadangan, public.laporan to authenticated;
 
 revoke execute on function public.peranan_saya(), public.ialah_admin(), public.ialah_penyunting(),
-  public.wajib_log_masuk(), public.nama_saya() from public;
+  public.ialah_staf(), public.wajib_log_masuk(), public.nama_saya() from public;
 grant execute on function public.peranan_saya(), public.ialah_admin(), public.ialah_penyunting(),
-  public.wajib_log_masuk(), public.nama_saya() to anon, authenticated, service_role;
+  public.ialah_staf(), public.wajib_log_masuk(), public.nama_saya() to anon, authenticated, service_role;
 
 -- ---------------------------------------------------------------------
 -- 5. ROW LEVEL SECURITY
@@ -455,10 +470,13 @@ create policy produk_ubah on public.produk for update to authenticated
 create policy produk_padam on public.produk for delete to authenticated
   using ((select public.ialah_admin()));
 
--- tutorial: yang terbit dibaca semua; draf hanya untuk admin/editor
+-- tutorial: yang terbit dibaca semua; 'staf sahaja' untuk staf/editor/admin; draf hanya untuk admin/editor
+-- (langkah, soalan dan laporan menyemak tutorial melalui dasar ini, jadi sekatan yang sama terpakai)
 create policy tutorial_baca on public.tutorial for select to anon, authenticated
   using (
-    (status = 'terbit' and ((select auth.uid()) is not null or not (select public.wajib_log_masuk())))
+    (status = 'terbit'
+      and ((select auth.uid()) is not null or not (select public.wajib_log_masuk()))
+      and (audiens = 'semua' or (select public.ialah_staf())))
     or (select public.ialah_penyunting())
   );
 create policy tutorial_tambah on public.tutorial for insert to authenticated
@@ -482,13 +500,16 @@ create policy langkah_ubah on public.langkah for update to authenticated
 create policy langkah_padam on public.langkah for delete to authenticated
   using ((select public.ialah_penyunting()));
 
--- nota, kegemaran, ditonton: milik sendiri sahaja
+-- nota, kegemaran, ditonton: milik sendiri sahaja, dan hanya untuk tutorial yang boleh dilihat
 create policy nota_sendiri on public.nota for all to authenticated
-  using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
+  using (user_id = (select auth.uid()))
+  with check (user_id = (select auth.uid()) and exists (select 1 from public.tutorial t where t.id = tutorial_id));
 create policy kegemaran_sendiri on public.kegemaran for all to authenticated
-  using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
+  using (user_id = (select auth.uid()))
+  with check (user_id = (select auth.uid()) and exists (select 1 from public.tutorial t where t.id = tutorial_id));
 create policy ditonton_sendiri on public.ditonton for all to authenticated
-  using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
+  using (user_id = (select auth.uid()))
+  with check (user_id = (select auth.uid()) and exists (select 1 from public.tutorial t where t.id = tutorial_id));
 
 -- soalan: pengguna log masuk boleh baca soalan bagi tutorial yang mereka boleh lihat;
 -- tulis soalan sendiri; admin boleh jawab dan padam

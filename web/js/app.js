@@ -20,6 +20,9 @@
   function role() { return me() ? me().peranan : 'tetamu'; }
   function isAdmin() { return role() === 'admin'; }
   function isEditor() { return role() === 'admin' || role() === 'editor'; }
+  // Staf, editor dan admin boleh lihat tutorial 'staf sahaja'; pengawal dan tetamu tidak.
+  function isStaff() { return isEditor() || role() === 'staf'; }
+  function staffOnly(tu) { return tu && tu.audiens === 'staf'; }
   function pick(row, base) { return I.pick(row, base); }
   function txt(row, base) { return I.text(row, base); }
   function missingTag(p) { return p.missing ? ' <span class="untr" lang="' + I.lang + '">' + esc(t('i18n.notTranslated')) + '</span>' : ''; }
@@ -64,7 +67,7 @@
     return n ? 'https://wa.me/' + n + '?text=' + encodeURIComponent(text) : '';
   }
   app.helpers = {
-    me: me, role: role, isAdmin: isAdmin, isEditor: isEditor, pick: pick, txt: txt, missingTag: missingTag,
+    me: me, role: role, isAdmin: isAdmin, isEditor: isEditor, isStaff: isStaff, staffOnly: staffOnly, pick: pick, txt: txt, missingTag: missingTag,
     errText: errText, busy: busy, patch: patch, firstImage: firstImage, visibleTuts: visibleTuts
   };
 
@@ -72,6 +75,8 @@
     st.cat = cat; st.prod = {}; st.tut = {}; st.steps = {}; st.tutsOf = {};
     cat.produk.forEach(function (p) { st.prod[p.id] = p; st.tutsOf[p.id] = []; });
     cat.tutorial.forEach(function (x) {
+      // The database already hides these; this also covers an older offline copy on a shared phone.
+      if (staffOnly(x) && !isStaff()) return;
       st.tut[x.id] = x; st.steps[x.id] = [];
       if (st.tutsOf[x.produk_id]) st.tutsOf[x.produk_id].push(x);
     });
@@ -257,6 +262,7 @@
     var n = (st.steps[tu.id] || []).length;
     c.push('<span>' + esc(I.tn('tutorial.stepCount', n, { n: U.fmtNum(n, I.lang) })) + '</span>');
     if (videoOf(tu)) c.push('<span class="c-video">' + svg('play') + esc(t('tutorial.hasVideo')) + '</span>');
+    if (staffOnly(tu)) c.push('<span class="c-staff">' + svg('lock') + esc(t('aud.badge')) + '</span>');
     if (tu.status !== 'terbit') c.push('<span class="c-draft">' + esc(t('status.draf')) + '</span>');
     else if (isNew(tu)) c.push('<span class="c-new">' + esc(t('tutorial.new')) + '</span>');
     if (watched(tu.id)) c.push('<span class="c-done">' + svg('check') + esc(t('tutorial.watched')) + '</span>');
@@ -298,7 +304,8 @@
         '<span class="l-body"><span class="l-title">' + esc(txt(lt, 'tajuk')) + '</span>' +
         '<span class="l-num">' + esc(total ? t('step.of', { n: stepN, total: total }) : t('tutorial.open')) + '</span></span>' + svg('next', 'chev') + '</a></section>';
     }
-    var prods = st.cat.produk;
+    // Products with nothing you can open (e.g. only staff tutorials, for a guard) are left out.
+    var prods = st.cat.produk.filter(function (p) { return isEditor() || visibleTuts(p.id).length; });
     h += '<section class="block"><h2 class="sec-h">' + esc(t('home.products')) + '</h2>';
     if (!prods.length) h += emptyBox(t('home.noProducts'), isAdmin() ? t('home.noProductsAdmin') : '');
     else {
@@ -399,6 +406,7 @@
 
     if (tu.status !== 'terbit') h += '<div class="banner draft" role="note">' + svg('eye') + '<span>' + esc(t('tutorial.draftBanner')) + '</span>' +
       (isEditor() ? '<a href="#/admin/t/' + esc(tu.id) + '">' + esc(t('admin.edit')) + '</a>' : '') + '</div>';
+    if (staffOnly(tu)) h += '<div class="banner staff" role="note">' + svg('lock') + '<span>' + esc(t('aud.banner')) + '</span></div>';
     h += '<p class="kicker">' + (p ? patch(p, 'xs') + esc(txt(p, 'nama')) + ' · ' : '') + esc(I.tn('tutorial.stepCount', steps.length, { n: U.fmtNum(steps.length, I.lang) })) + '</p>' +
       '<h1 class="t-title">' + esc(title.text) + missingTag(title) + '</h1>' +
       (sum.text ? '<p class="lede">' + esc(sum.text) + missingTag(sum) + '</p>' : '');
@@ -787,7 +795,7 @@
         var h = '';
         if (S.mode === 'demo') {
           h += '<div class="demo-pick"><p>' + esc(t('demo.pick')) + '</p><div class="foot-actions">' +
-            ['admin', 'editor', 'staf'].map(function (r) { return '<button type="button" class="btn" data-act="demo-as" data-role="' + r + '">' + esc(t('role.' + r)) + '</button>'; }).join('') + '</div></div>';
+            ['admin', 'editor', 'staf', 'pengawal'].map(function (r) { return '<button type="button" class="btn" data-act="demo-as" data-role="' + r + '">' + esc(t('role.' + r)) + '</button>'; }).join('') + '</div></div>';
         }
         if (mode !== 'reset') {
           h += '<div class="seg" role="tablist" aria-label="' + esc(t('auth.signIn')) + '">' +

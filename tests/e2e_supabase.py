@@ -36,6 +36,14 @@ def psql(sql):
 REST = """path => fetch(%s + '/rest/v1/' + path, { headers: { apikey: %s } })
   .then(r => r.json().then(j => ({ status: r.status, count: Array.isArray(j) ? j.length : -1 })))""" % (json.dumps(SB_URL), json.dumps(SB_KEY))
 
+# Same request, but signed in as whoever is logged in on that page (straight to the database API).
+REST_ME = """path => {
+  const k = Object.keys(localStorage).find(k => /^sb-.*-auth-token$/.test(k));
+  const tok = k ? JSON.parse(localStorage.getItem(k)).access_token : '';
+  return fetch(%s + '/rest/v1/' + path, { headers: { apikey: %s, Authorization: 'Bearer ' + tok } })
+    .then(r => r.json().then(j => ({ status: r.status, count: Array.isArray(j) ? j.length : -1 })));
+}""" % (json.dumps(SB_URL), json.dumps(SB_KEY))
+
 
 def poll(fn, expected, timeout=10):
     end = time.time() + timeout
@@ -166,7 +174,7 @@ def run(browser):
     actx = context(browser)
     a = open_page(actx)
     sign_up(a, "admin@gep.test", "Aina Admin")
-    check("Profil dicipta dengan nama", psql("select nama || '|' || peranan from public.profiles where emel = 'admin@gep.test'") == "Aina Admin|staf")
+    check("Profil dicipta dengan nama", psql("select nama || '|' || peranan from public.profiles where emel = 'admin@gep.test'") == "Aina Admin|pengawal")
     sql = open(os.path.join(ROOT, "..", "supabase", "make-admin.sql"), encoding="utf-8").read().replace("emel.anda@contoh.com", "admin@gep.test")
     r = subprocess.run(["psql", DB_URL, "-X", "-q", "-v", "ON_ERROR_STOP=1", "-At", "-c", sql], capture_output=True, text=True)
     check("make-admin.sql berjalan", r.returncode == 0 and "admin" in r.stdout, r.stderr or r.stdout)
@@ -225,6 +233,38 @@ def run(browser):
     s = open_page(sctx)
     sign_up(s, "staf@gep.test", "Kumar Staf", lang_btn="en")
     check("Bahasa daftar disimpan dalam profil", psql("select bahasa from public.profiles where emel = 'staf@gep.test'") == "en")
+    sid = psql("select id from public.profiles where emel = 'staf@gep.test'")
+    check("Pendaftaran baharu menjadi pengawal", psql("select peranan from public.profiles where id = '%s'" % sid) == "pengawal")
+
+    # ---------------- staff-only tutorials and the guard role ----------------
+    ops_t = "b0000000-0000-4000-8000-000000000002"
+    go(a, "#/admin/t/" + ops_t)
+    a.wait_for_selector("#ed-audiens")
+    a.select_option("#ed-audiens", "staf")
+    a.click("[data-form=adm-tut] [data-intent=save]")
+    toast(a)
+    check("Admin menjadikan tutorial staf sahaja", psql("select audiens || '|' || status from public.tutorial where id = '%s'" % ops_t) == "staf|terbit")
+    s.reload(wait_until="networkidle")
+    ready(s)
+    check("Pengawal tidak nampak produk yang hanya ada tutorial staf", "GEP OPS" not in s.inner_text("main") and s.locator("a.product").count() == 2)
+    go(s, "#/t/" + ops_t)
+    s.wait_for_function("!document.querySelector('.skel') && (GEPApp.st.refreshing || 0) === 0")
+    check("Pengawal tidak boleh buka tutorial staf melalui pautan", EN["notfound.title"] in s.inner_text("main"))
+    rows = s.evaluate(REST_ME, "tutorial?select=id&id=eq." + ops_t)
+    check("Pangkalan data menolak tutorial staf untuk pengawal (API)", rows["status"] == 200 and rows["count"] == 0, rows)
+    rows = s.evaluate(REST_ME, "langkah?select=id&tutorial_id=eq." + ops_t)
+    check("Pangkalan data menolak langkah tutorial staf untuk pengawal (API)", rows["status"] == 200 and rows["count"] == 0, rows)
+    rows = g.evaluate(REST, "tutorial?select=id&id=eq." + ops_t)
+    check("Tetamu juga tidak nampak tutorial staf (API)", rows["count"] == 0, rows)
+    go(a, "#/admin/pengguna")
+    a.wait_for_selector("select[data-role-for='%s']" % sid)
+    a.select_option("select[data-role-for='%s']" % sid, "staf")
+    check("Admin menaikkan pengawal menjadi staf", toast(a) == MS["users.saved"] and psql("select peranan from public.profiles where id = '%s'" % sid) == "staf")
+    s.reload(wait_until="networkidle")
+    ready(s)
+    go(s, "#/t/" + ops_t)
+    s.wait_for_selector(".banner.staff", timeout=15000)
+    check("Staf nampak tutorial staf sahaja", "GEP OPS" in s.inner_text("main"))
     go(s, "#/t/" + tid)
     check("Staf nampak tutorial terbit (EN)", "Send a quick report" in s.inner_text("main"))
     check("Langkah tanpa EN memaparkan label belum diterjemah", EN["i18n.notTranslated"] in s.inner_text(".steps"))
@@ -239,7 +279,6 @@ def run(browser):
     check("Soalan dihantar", toast(s) == EN["qa.sent"])
     s.click("[data-act=understood]")
     toast(s)
-    sid = psql("select id from public.profiles where emel = 'staf@gep.test'")
     check("Data peribadi dalam pangkalan data", psql("select concat((select count(*) from public.nota where user_id='%s'), (select count(*) from public.kegemaran where user_id='%s'), (select count(*) from public.ditonton where user_id='%s'), (select count(*) from public.soalan where user_id='%s'))" % (sid, sid, sid, sid)) == "1111")
     check("Nama penanya diisi oleh pangkalan data", psql("select nama from public.soalan where user_id = '%s'" % sid) == "Kumar Staf")
     err = s.evaluate("() => GEPApp.S.saveProduk({kod:'HACK', nama_ms:'Hack', warna:'#FFFFFF'}).then(() => 'ok', e => e.code)")
