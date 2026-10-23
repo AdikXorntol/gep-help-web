@@ -65,6 +65,8 @@ jobs:
         run: pip install playwright==1.48.0 pillow && python -m playwright install --with-deps chromium
       - name: Browser tests (demo mode)
         run: |
+          # Demo tests never touch the live database: blank the keys for this run only.
+          printf "window.GEP_CONFIG = { supabaseUrl: '', supabaseAnonKey: '' };\n" > web/config.js
           (cd web && python -m http.server 8090 --bind 127.0.0.1 > /dev/null 2>&1 &)
           sleep 2
           python tests/e2e_demo.py http://127.0.0.1:8090/ 2>&1 | tee demo.log
@@ -135,6 +137,7 @@ jobs:
       - name: Lighthouse (mobile)
         run: |
           # GitHub Pages serves files compressed; 'serve' does the same locally.
+          printf "window.GEP_CONFIG = { supabaseUrl: '', supabaseAnonKey: '' };\n" > web/config.js
           (npx -y serve@14.2.4 web -l 8090 --no-clipboard > /dev/null 2>&1 &)
           for i in $(seq 1 30); do curl -fs http://127.0.0.1:8090/ > /dev/null && break; sleep 1; done
           npm i -g lighthouse@12.2.1 > /dev/null 2>&1

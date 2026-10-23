@@ -32,6 +32,10 @@ def make_image(path, w=600, h=1000):
 def new_page(browser, width=390, height=844, locale="ms-MY", welcome_seen=True, lang="ms", sw=False):
     ctx = browser.new_context(viewport={"width": width, "height": height}, locale=locale,
                               service_workers="allow" if sw else "block")
+    # Always demo mode, even when web/config.js holds the live keys.
+    ctx.route("**/config.js", lambda route: route.fulfill(
+        status=200, content_type="application/javascript",
+        body="window.GEP_CONFIG = { supabaseUrl: '', supabaseAnonKey: '' };"))
     script = ""
     if welcome_seen:
         script += "try{if(!localStorage.getItem('gep_welcome_seen'))localStorage.setItem('gep_welcome_seen','1')}catch(e){}"
