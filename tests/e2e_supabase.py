@@ -274,6 +274,7 @@ def run(browser):
     check("Jawapan admin disimpan", psql("select jawapan <> '' and dijawab_pada is not null from public.soalan where user_id = '%s'" % sid) == "t")
     s.reload(wait_until="networkidle")
     ready(s)
+    go(s, "#/t/" + tid)
     s.wait_for_selector(".qa-a", timeout=15000)
     check("Staf nampak jawapan admin", "Yes, the last copy stays" in s.inner_text("#qa"))
 
