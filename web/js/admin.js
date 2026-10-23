@@ -64,12 +64,17 @@
     initSortables(document.getElementById('app'));
     var sub = r.parts[1] || '';
     var staleInbox = !adm.inboxAt || Date.now() - adm.inboxAt > 15000;
-    if (H.isAdmin() && !adm.loadingInbox && (!adm.inbox || (sub === 'kotak' && staleInbox))) loadInbox();
-    if (sub === 'pengguna' && H.isAdmin() && !adm.users && !adm.loadingUsers) loadUsers();
+    if (H.isAdmin() && !adm.loadingInbox && (!adm.inboxAt || (sub === 'kotak' && staleInbox))) loadInbox();
+    // Fetch the user list each time the tab is opened (people sign up all the time), not on every re-render.
+    if (sub === 'pengguna' && H.isAdmin() && !adm.loadingUsers && (!adm.usersAt || adm.usersRoute !== st.route)) {
+      adm.usersRoute = st.route;
+      loadUsers();
+    }
   };
   function loadInbox() {
     adm.loadingInbox = true;
-    S().listInbox().then(function (x) { adm.inbox = x; adm.inboxAt = Date.now(); adm.inboxErr = null; }, function (e) { adm.inboxErr = e; }).then(function () {
+    S().listInbox().then(function (x) { adm.inbox = x; adm.inboxErr = null; }, function (e) { adm.inboxErr = e; }).then(function () {
+      adm.inboxAt = Date.now(); // also after an error, so a failing request isn't retried on every render
       adm.loadingInbox = false;
       if (st.route && st.route.name === 'admin') app.render();
     });
@@ -77,6 +82,7 @@
   function loadUsers() {
     adm.loadingUsers = true;
     S().listUsers().then(function (x) { adm.users = x; adm.usersErr = null; }, function (e) { adm.usersErr = e; }).then(function () {
+      adm.usersAt = Date.now();
       adm.loadingUsers = false;
       if (st.route && st.route.name === 'admin') app.render();
     });
@@ -84,7 +90,7 @@
   // Signing in as someone else must not show the previous person's admin data.
   app.beforeRefresh = function () {
     var who = H.me() ? H.me().id : '';
-    if (adm.who !== who) { adm.who = who; adm.inbox = null; adm.inboxErr = null; adm.users = null; adm.usersErr = null; adm.orphans = null; }
+    if (adm.who !== who) { adm.who = who; adm.inbox = null; adm.inboxErr = null; adm.inboxAt = 0; adm.users = null; adm.usersErr = null; adm.usersAt = 0; adm.orphans = null; }
   };
 
   /* ======================= content ======================= */
