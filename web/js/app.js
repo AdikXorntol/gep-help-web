@@ -586,6 +586,8 @@
     try { history.pushState({ gepLayer: L.id }, ''); L.pushed = true; } catch (e) { L.pushed = false; }
     el.addEventListener('click', function (e) { if (e.target === el && opts.dismiss !== false) closeLayer(L); });
     setTimeout(function () {
+      // Don't steal focus if the person (or a password manager) is already typing in this layer.
+      if (L.closed || el.contains(document.activeElement)) return;
       var f = el.querySelector('[autofocus]') || el.querySelector('input:not([type=hidden]),textarea,select') || el.querySelector('h2, h1, button');
       if (f) { if (!f.matches('input,textarea,select,button,a')) f.setAttribute('tabindex', '-1'); f.focus({ preventScroll: true }); }
     }, 30);
