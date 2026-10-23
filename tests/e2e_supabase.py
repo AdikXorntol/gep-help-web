@@ -16,6 +16,8 @@ MS = json.load(open(os.path.join(ROOT, "i18n", "ms.json"), encoding="utf-8"))
 EN = json.load(open(os.path.join(ROOT, "i18n", "en.json"), encoding="utf-8"))
 CONFIG = "window.GEP_CONFIG = { supabaseUrl: %s, supabaseAnonKey: %s };" % (json.dumps(SB_URL), json.dumps(SB_KEY))
 results, console_problems, expected_network = [], [], []
+PAGES, CONTEXTS = {}, []
+ART = os.environ.get("ARTIFACT_DIR", "test-artifacts")
 PW = "Rahsia-123"
 
 
@@ -55,6 +57,8 @@ def make_image(path):
 
 def context(browser, locale="ms-MY", lang="ms", sw=False, offline_ok=False):
     ctx = browser.new_context(viewport={"width": 390, "height": 844}, locale=locale, service_workers="allow" if sw else "block")
+    ctx.tracing.start(screenshots=True, snapshots=True)
+    CONTEXTS.append(ctx)
     ctx.route("**/config.js", lambda route: route.fulfill(status=200, content_type="application/javascript", body=CONFIG))
     script = "try{if(!localStorage.getItem('gep_welcome_seen'))localStorage.setItem('gep_welcome_seen','1')}catch(e){}"
     if lang:
@@ -65,6 +69,8 @@ def context(browser, locale="ms-MY", lang="ms", sw=False, offline_ok=False):
 
 def open_page(ctx, hash_=""):
     page = ctx.new_page()
+    PAGES[len(PAGES)] = page
+    page.on("console", lambda m: page_log.append("[%d] %s: %s" % (len(PAGES) - 1, m.type, m.text)))
 
     def on_console(m):
         if m.type not in ("error", "warning") or "Service Worker registration blocked" in m.text:
@@ -187,6 +193,7 @@ def run(browser):
     until(a, "document.querySelector('.sheet .mk-stage img').complete")
     box = a.locator(".sheet .mk-stage").bounding_box()
     a.mouse.click(box["x"] + box["width"] * 0.5, box["y"] + box["height"] * 0.633)
+    check("Bulatan diletak pada gambar", until(a, "!!document.querySelector('.sheet .mk-stage .mk-o')"), box)
     a.fill("#st-teks-ms", "Tekan butang Hantar.")
     a.click("[data-form=adm-step] [data-act=ltab][data-l=en]")
     a.fill("#st-teks-en", "Tap the Send button.")
@@ -401,6 +408,30 @@ def run(browser):
         c.close()
 
 
+page_log = []
+
+
+def dump():
+    os.makedirs(ART, exist_ok=True)
+    for i, pg in PAGES.items():
+        try:
+            if pg.is_closed():
+                continue
+            pg.screenshot(path=os.path.join(ART, "page-%d.png" % i), full_page=False)
+            info = pg.evaluate("""() => ({ hash: location.hash, body: document.body.className, history: history.length,
+              layers: document.getElementById('layers').innerHTML.slice(0, 1500),
+              main: (document.querySelector('main') || document.body).innerText.slice(0, 600) })""")
+            print("---- page %d: %s" % (i, json.dumps(info, ensure_ascii=False)[:2500]))
+        except Exception as e:
+            print("---- page %d: dump failed %s" % (i, e))
+    for j, c in enumerate(CONTEXTS):
+        try:
+            c.tracing.stop(path=os.path.join(ART, "trace-%d.zip" % j))
+        except Exception:
+            pass
+    open(os.path.join(ART, "console.log"), "w").write("\n".join(page_log))
+
+
 def main():
     with sync_playwright() as p:
         browser = p.chromium.launch()
@@ -409,6 +440,7 @@ def main():
         except Exception:
             traceback.print_exc()
             check("Ujian Supabase berjalan hingga habis", False)
+            dump()
         browser.close()
     check("Tiada ralat atau amaran konsol", not console_problems, console_problems[:8])
     failed = [r for r in results if not r[1]]

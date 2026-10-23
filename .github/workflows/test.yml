@@ -123,6 +123,7 @@ jobs:
             supabase-db.log
             supabase-e2e.log
             supabase-services.log
+            test-artifacts/
           if-no-files-found: ignore
 
   lighthouse:
