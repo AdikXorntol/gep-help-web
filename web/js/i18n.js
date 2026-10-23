@@ -13,14 +13,25 @@
     return /^ms/i.test(nav) ? 'ms' : 'en';
   };
 
-  I.load = function () {
-    return Promise.all(LANGS.map(function (l) {
-      return fetch('i18n/' + l + '.json', { cache: 'no-cache' }).then(function (r) {
+  var loading = {};
+  function fetchLang(l) {
+    if (!loading[l]) {
+      loading[l] = fetch('i18n/' + l + '.json', { credentials: 'same-origin' }).then(function (r) {
         if (!r.ok) throw new Error('i18n ' + l + ' ' + r.status);
         return r.json();
-      }).then(function (j) { dict[l] = j; });
-    })).then(function () { I.ready = true; });
+      }).then(function (j) { dict[l] = j; I.loaded[l] = true; }, function (e) { loading[l] = null; throw e; });
+    }
+    return loading[l];
+  }
+  I.loaded = {};
+  // Loads the current language first (needed to draw the page), then the other one in the background.
+  I.load = function () {
+    return fetchLang(I.lang).then(function () {
+      I.ready = true;
+      setTimeout(function () { fetchLang(I.lang === 'ms' ? 'en' : 'ms').catch(function () { /* retried on toggle */ }); }, 300);
+    });
   };
+  I.ensure = function (l) { return I.loaded[l] ? Promise.resolve() : fetchLang(l); };
 
   I.set = function (lang, remember) {
     if (LANGS.indexOf(lang) < 0) return;

@@ -331,7 +331,7 @@
           var en = String(l.teks_en || '').trim();
           return '<li data-id="' + esc(l.id) + '"><button type="button" class="grip" aria-label="' + esc(t('admin.drag')) + '">' + svg('grip') + '</button>' +
             '<span class="step-num" aria-hidden="true">' + (i + 1) + '</span>' +
-            (l.gambar_path ? '<span class="st-thumb"><span class="shot-in"><img src="' + esc(S().imageUrl(l.gambar_path)) + '" alt="" loading="lazy">' + U.markersHtml(l.penanda) + '</span></span>' : '<span class="st-thumb none">' + svg('image') + '</span>') +
+            (l.gambar_path ? '<span class="st-thumb"><span class="shot-in"><img src="' + esc(S().imageUrl(l.gambar_path)) + '" alt=""' + U.dims(l) + ' loading="lazy">' + U.markersHtml(l.penanda) + '</span></span>' : '<span class="st-thumb none">' + svg('image') + '</span>') +
             '<span class="grow"><span class="st-text">' + esc(l.teks_ms) + '</span><span class="chips"><span class="tr ' + (en ? 'ok' : 'no') + '">EN ' + (en ? '✓' : '✗') + '</span>' +
             (l.penanda.length ? '<span>' + esc(I.tn('admin.markerCount', l.penanda.length)) + '</span>' : '') + '</span></span>' +
             '<span class="tools">' +
@@ -536,6 +536,8 @@
     var up = s.img ? S().uploadImage(tid, s.img).then(function (p) { uploaded = p; return p; }) : Promise.resolve(s.path);
     up.then(function (path) {
       var row = { tutorial_id: tid, teks_ms: s.teks_ms.trim(), teks_en: s.teks_en.trim(), gambar_path: path || '', penanda: path ? U.cleanMarkers(s.marks) : [] };
+      if (s.img) { row.gambar_lebar = s.img.width; row.gambar_tinggi = s.img.height; }
+      else if (!path) { row.gambar_lebar = null; row.gambar_tinggi = null; }
       if (orig) row.id = orig.id; else row.susunan = (st.steps[tid] || []).length + 1;
       return S().saveLangkah(row).then(function () {
         if (oldPath && oldPath !== (path || '')) S().removeImages([oldPath]);

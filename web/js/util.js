@@ -232,6 +232,12 @@
     }).join('');
   };
 
+  // width/height attributes let the browser keep space for a picture before it loads.
+  U.dims = function (l) {
+    var w = Number(l && l.gambar_lebar), h = Number(l && l.gambar_tinggi);
+    return w > 0 && h > 0 ? ' width="' + Math.round(w) + '" height="' + Math.round(h) + '"' : '';
+  };
+
   /* ---------- image compression ---------- */
   var webpOk = null;
   function canWebp() {

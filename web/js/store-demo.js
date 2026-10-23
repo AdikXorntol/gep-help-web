@@ -40,7 +40,7 @@
       });
     }
     function step(tid, n, ms, en, img, mk) {
-      db.langkah.push({ id: U.uid(), tutorial_id: tid, susunan: n, teks_ms: ms, teks_en: en, gambar_path: img || '', penanda: mk || [], dicipta: daysAgo(30), dikemas_kini: daysAgo(3) });
+      db.langkah.push({ id: U.uid(), tutorial_id: tid, susunan: n, teks_ms: ms, teks_en: en, gambar_path: img || '', gambar_lebar: img ? 720 : null, gambar_tinggi: img ? 1280 : null, penanda: mk || [], dicipta: daysAgo(30), dikemas_kini: daysAgo(3) });
     }
     var T = {
       app1: 'b0000000-0000-4000-8000-000000000001', app2: 'b0000000-0000-4000-8000-000000000011', app3: 'b0000000-0000-4000-8000-000000000012',
@@ -224,7 +224,7 @@
       var row = l.id ? find(db.langkah, l.id) : null;
       if (l.id && !row) return fail('notfound');
       if (!row) { row = { id: U.uid(), dicipta: now(), susunan: 99, penanda: [] }; db.langkah.push(row); }
-      ['tutorial_id', 'susunan', 'teks_ms', 'teks_en', 'gambar_path'].forEach(function (k) { if (l[k] !== undefined) row[k] = l[k]; });
+      ['tutorial_id', 'susunan', 'teks_ms', 'teks_en', 'gambar_path', 'gambar_lebar', 'gambar_tinggi'].forEach(function (k) { if (l[k] !== undefined) row[k] = l[k]; });
       if (l.penanda !== undefined) row.penanda = U.cleanMarkers(l.penanda);
       row.dikemas_kini = now();
       editorTouched(row.tutorial_id);

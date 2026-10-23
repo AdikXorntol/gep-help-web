@@ -10,16 +10,22 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<link rel="preload" href="fonts/heros-bold.woff" as="font" type="font/woff" crossorigin>
-<link rel="preload" href="fonts/heroscn-bold.woff" as="font" type="font/woff" crossorigin>
+<script>
+  // Start downloading the interface text for the likely language right away.
+  (function () {
+    var l = '';
+    try { l = JSON.parse(localStorage.getItem('gep_lang') || '""'); } catch (e) { l = ''; }
+    if (l !== 'ms' && l !== 'en') l = /^ms/i.test((navigator.languages && navigator.languages[0]) || navigator.language || '') ? 'ms' : 'en';
+    var k = document.createElement('link');
+    k.rel = 'preload'; k.as = 'fetch'; k.href = 'i18n/' + l + '.json'; k.crossOrigin = 'anonymous';
+    document.head.appendChild(k);
+  })();
+</script>
 <link rel="stylesheet" href="css/app.css">
 <script src="config.js" defer></script>
 <script src="js/util.js" defer></script>
 <script src="js/i18n.js" defer></script>
-<script src="js/store-demo.js" defer></script>
-<script src="js/store-supabase.js" defer></script>
 <script src="js/app.js" defer></script>
-<script src="js/admin.js" defer></script>
 </head>
 <body>
 <div id="app">

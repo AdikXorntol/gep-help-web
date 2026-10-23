@@ -135,6 +135,12 @@
     var changed = !st.route || st.route.hash !== r.hash;
     if (changed) { st.prevRoute = st.route; st.route = r; }
     var keep = changed ? null : captureFields($root);
+    if (r.name === 'admin' && !app.routes.admin) {
+      document.body.className = 'r-admin' + (layers.length ? ' lock' : '');
+      $root.innerHTML = topbar('#/', '') + '<main class="page">' + loadingBox() + '</main>';
+      loadScript('js/admin.js').then(render, function (e) { st.loadError = e; $root.innerHTML = topbar('#/', '') + '<main class="page">' + errorBox(e) + '</main>'; });
+      return;
+    }
     var view = VIEWS[r.name] || app.routes[r.name] || VIEWS.notfound;
     document.body.className = 'r-' + r.name + (S && S.mode === 'demo' ? ' demo' : '') + (layers.length ? ' lock' : '');
     $root.innerHTML = view(r);
@@ -357,7 +363,7 @@
     if (!l.gambar_path) return '';
     var alt = t('step.imgAlt', { n: n }) + ': ' + txt(l, 'teks');
     return '<button type="button" class="shot" data-act="' + (act || 'zoom') + '" data-step="' + esc(l.id) + '" aria-label="' + esc(t('step.zoom', { n: n })) + '">' +
-      '<span class="shot-in"><img src="' + esc(S.imageUrl(l.gambar_path)) + '" alt="' + esc(alt) + '" loading="lazy" decoding="async">' + U.markersHtml(l.penanda) + '</span>' +
+      '<span class="shot-in"><img src="' + esc(S.imageUrl(l.gambar_path)) + '" alt="' + esc(alt) + '"' + U.dims(l) + ' loading="lazy" decoding="async">' + U.markersHtml(l.penanda) + '</span>' +
       '<span class="zoom-hint">' + svg('zoomIn') + '</span></button>';
   }
   app.shot = shot;
@@ -679,7 +685,7 @@
         return '<div class="lb-top"><span>' + esc(t('step.label', { n: n })) + '</span><span class="sp"></span>' +
           '<button type="button" class="icon-btn light" data-act="lb-zoom" aria-label="' + esc(t(zoom > 1 ? 'zoom.out' : 'zoom.in')) + '">' + svg(zoom > 1 ? 'zoomOut' : 'zoomIn') + '</button>' +
           '<button type="button" class="icon-btn light" data-act="close" aria-label="' + esc(t('form.close')) + '">' + svg('x') + '</button></div>' +
-          '<div class="lb-scroll"><span class="shot-in lb-img" style="width:' + (zoom * 100) + '%"><img src="' + esc(S.imageUrl(l.gambar_path)) + '" alt="' + esc(t('step.imgAlt', { n: n }) + ': ' + txt(l, 'teks')) + '">' + U.markersHtml(l.penanda) + '</span></div>' +
+          '<div class="lb-scroll"><span class="shot-in lb-img" style="width:' + (zoom * 100) + '%"><img src="' + esc(S.imageUrl(l.gambar_path)) + '"' + U.dims(l) + ' alt="' + esc(t('step.imgAlt', { n: n }) + ': ' + txt(l, 'teks')) + '">' + U.markersHtml(l.penanda) + '</span></div>' +
           '<p class="lb-cap">' + esc(txt(l, 'teks')) + '</p>';
       },
       onOpen: function (L) { L.toggleZoom = function () { zoom = zoom > 1 ? 1 : 2.4; paintLayer(L); }; }
@@ -1018,6 +1024,11 @@
   app.ACT.lang = function (el) {
     var l = el.dataset.lang;
     if (l === I.lang) return;
+    if (!I.loaded[l]) {
+      busy(el, true);
+      I.ensure(l).then(function () { busy(el, false); app.ACT.lang(el); }, function (e) { busy(el, false); toast(errText(e), 'err'); });
+      return;
+    }
     I.set(l, true);
     render();
     repaintLayers();
@@ -1088,16 +1099,27 @@
   // Pinned supabase-js build, loaded only when Supabase keys are set in config.js.
   var SUPABASE_JS = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js';
   function hasBackend() { return !!(String(CFG.supabaseUrl || '').trim() && String(CFG.supabaseAnonKey || '').trim()); }
+  var scripts = {};
+  function loadScript(src, cors) {
+    if (!scripts[src]) {
+      scripts[src] = new Promise(function (resolve, reject) {
+        var s = document.createElement('script');
+        s.src = src;
+        if (cors) s.crossOrigin = 'anonymous';
+        s.onload = function () { resolve(); };
+        s.onerror = function () { scripts[src] = null; reject(new Error('could not load ' + src)); };
+        document.head.appendChild(s);
+      });
+    }
+    return scripts[src];
+  }
+  app.loadScript = loadScript;
+  // Demo data or Supabase: only the code that is needed gets downloaded.
   function loadBackend() {
-    if (!hasBackend() || (window.supabase && window.supabase.createClient)) return Promise.resolve();
-    return new Promise(function (resolve, reject) {
-      var s = document.createElement('script');
-      s.src = CFG.supabaseJs || SUPABASE_JS;
-      s.crossOrigin = 'anonymous';
-      s.onload = function () { resolve(); };
-      s.onerror = function () { reject(new Error('supabase-js failed to load')); };
-      document.head.appendChild(s);
-    });
+    if (!hasBackend()) return window.GEPDemoStore ? Promise.resolve() : loadScript('js/store-demo.js');
+    var lib = window.supabase && window.supabase.createClient ? Promise.resolve() : loadScript(CFG.supabaseJs || SUPABASE_JS, true);
+    var store = window.GEPSupabaseStore ? Promise.resolve() : loadScript('js/store-supabase.js');
+    return Promise.all([lib, store]);
   }
 
   function createStore() {

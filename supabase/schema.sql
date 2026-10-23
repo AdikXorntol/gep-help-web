@@ -66,11 +66,16 @@ create table if not exists public.langkah (
   teks_en       text not null default '' check (char_length(teks_en) <= 500),
   gambar_path   text not null default ''
                 check (gambar_path ~ '^(img/contoh/[a-z0-9-]{1,40}\.(jpg|png|webp)|[0-9a-f-]{36}/[A-Za-z0-9._-]{1,80})?$'),
+  gambar_lebar  integer check (gambar_lebar between 1 and 20000),
+  gambar_tinggi integer check (gambar_tinggi between 1 and 20000),
   penanda       jsonb not null default '[]'::jsonb
                 check (jsonb_typeof(penanda) = 'array' and jsonb_array_length(penanda) <= 20),
   dicipta       timestamptz not null default now(),
   dikemas_kini  timestamptz not null default now()
 );
+-- Saiz gambar (piksel) supaya ruang gambar dikhaskan sebelum ia dimuatkan.
+alter table public.langkah add column if not exists gambar_lebar integer check (gambar_lebar between 1 and 20000);
+alter table public.langkah add column if not exists gambar_tinggi integer check (gambar_tinggi between 1 and 20000);
 create index if not exists langkah_tutorial_idx on public.langkah (tutorial_id, susunan);
 
 create table if not exists public.nota (
@@ -602,6 +607,8 @@ begin
      'img/contoh/lite-2.jpg', '[{"t":"a","x":50,"y":60,"d":45}]'),
     (t_lite, 3, 'Masukkan butiran akaun dan tekan Teruskan.', 'Enter your account details and tap Continue.',
      'img/contoh/lite-3.jpg', '[]');
+
+  update public.langkah set gambar_lebar = 720, gambar_tinggi = 1280 where gambar_path like 'img/contoh/%';
 end;
 $$;
 

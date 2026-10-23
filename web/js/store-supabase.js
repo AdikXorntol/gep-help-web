@@ -202,7 +202,7 @@
 
     var PRODUK_COLS = ['kod', 'nama_ms', 'nama_en', 'keterangan_ms', 'keterangan_en', 'warna', 'susunan'];
     var TUTORIAL_COLS = ['produk_id', 'tajuk_ms', 'tajuk_en', 'ringkasan_ms', 'ringkasan_en', 'video_url_ms', 'video_url_en', 'status', 'susunan'];
-    var LANGKAH_COLS = ['tutorial_id', 'susunan', 'teks_ms', 'teks_en', 'gambar_path', 'penanda'];
+    var LANGKAH_COLS = ['tutorial_id', 'susunan', 'teks_ms', 'teks_en', 'gambar_path', 'gambar_lebar', 'gambar_tinggi', 'penanda'];
     function pickCols(obj, cols) {
       var o = {};
       cols.forEach(function (c) { if (obj[c] !== undefined) o[c] = obj[c]; });
