@@ -418,7 +418,7 @@
     var s = {
       teks_ms: orig ? orig.teks_ms : '', teks_en: orig ? orig.teks_en : '',
       path: orig ? orig.gambar_path : '', marks: orig ? U.cleanMarkers(orig.penanda) : [],
-      img: null, tool: 'o', sel: -1, ltab: adm.ftab, busy: '', err: ''
+      img: null, tool: 'o', sel: -1, ltab: orig ? adm.ftab : 'ms', busy: '', err: ''
     };
     function imgUrl() { return s.img ? s.img.url : (s.path ? S().imageUrl(s.path) : ''); }
     var L = app.sheet({

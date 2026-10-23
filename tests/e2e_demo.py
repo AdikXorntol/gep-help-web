@@ -400,6 +400,8 @@ def run(browser):
     page.wait_for_timeout(50)
     check("Petunjuk pautan video sah", "ok" in page.get_attribute("#ed-vid-ms-hint", "class"))
     page.fill("#ed-ring-ms", "Cara mohon cuti dalam app.")
+    page.click("[data-form=adm-tut] [data-act=ltab][data-l=en]")
+    page.fill("#ed-tajuk-en", "Apply for leave")
     page.click("[data-form=adm-tut] [data-intent=save]")
     toast(page); wait_toast_gone(page)
     page.wait_for_selector("[data-act=adm-step-edit].add-btn")
@@ -408,6 +410,7 @@ def run(browser):
     # step 1 with picture and markers
     page.click("[data-act=adm-step-edit].add-btn")
     page.wait_for_selector(".sheet .drop")
+    check("Langkah baharu dibuka pada tab BM", page.get_attribute(".sheet [data-act=ltab][data-l=ms]", "aria-selected") == "true")
     page.set_input_files(".sheet input[type=file]", img)
     page.wait_for_selector(".sheet .mk-stage img")
     page.wait_for_function("document.querySelector('.sheet .mk-stage img').complete")
