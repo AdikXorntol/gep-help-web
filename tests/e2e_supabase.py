@@ -240,7 +240,7 @@ def run(browser):
     s.click("[data-act=understood]")
     toast(s)
     sid = psql("select id from public.profiles where emel = 'staf@gep.test'")
-    check("Data peribadi dalam pangkalan data", psql("select (select count(*) from public.nota where user_id='%s') || (select count(*) from public.kegemaran where user_id='%s') || (select count(*) from public.ditonton where user_id='%s') || (select count(*) from public.soalan where user_id='%s')" % (sid, sid, sid, sid)) == "1111")
+    check("Data peribadi dalam pangkalan data", psql("select concat((select count(*) from public.nota where user_id='%s'), (select count(*) from public.kegemaran where user_id='%s'), (select count(*) from public.ditonton where user_id='%s'), (select count(*) from public.soalan where user_id='%s'))" % (sid, sid, sid, sid)) == "1111")
     check("Nama penanya diisi oleh pangkalan data", psql("select nama from public.soalan where user_id = '%s'" % sid) == "Kumar Staf")
     err = s.evaluate("() => GEPApp.S.saveProduk({kod:'HACK', nama_ms:'Hack', warna:'#FFFFFF'}).then(() => 'ok', e => e.code)")
     check("Staf disekat menulis produk (RLS)", err == "permission", err)
