@@ -1,0 +1,173 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  static:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntax, JSON, translations, pinned library
+        run: |
+          {
+            for f in web/js/*.js web/sw.js web/config.js; do node --check "$f" && echo "syntax ok: $f"; done
+            python3 -c "import json,glob; fs=glob.glob('web/i18n/*.json')+['web/manifest.webmanifest']; [json.load(open(f)) for f in fs]; print('json ok:', len(fs), 'files')"
+            python3 tests/check_i18n.py
+            url=$(grep -o "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@[^']*" web/js/app.js)
+            echo "supabase-js: $url"
+            curl -fsSL -o /tmp/sb.js "$url"
+            grep -q "createClient" /tmp/sb.js && echo "supabase-js on CDN: ok ($(wc -c < /tmp/sb.js) bytes)"
+          } 2>&1 | tee static.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: static, path: static.log, if-no-files-found: ignore }
+
+  database:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: schema.sql twice + RLS tests (stand-in Supabase objects)
+        env:
+          PGHOST: localhost
+          PGUSER: postgres
+          PGPASSWORD: postgres
+        run: bash tests/db/run_local.sh 2>&1 | tee database.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: database, path: database.log, if-no-files-found: ignore }
+
+  demo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - name: Install Playwright
+        run: pip install playwright==1.48.0 pillow && python -m playwright install --with-deps chromium
+      - name: Browser tests (demo mode)
+        run: |
+          (cd web && python -m http.server 8090 --bind 127.0.0.1 > /dev/null 2>&1 &)
+          sleep 2
+          python tests/e2e_demo.py http://127.0.0.1:8090/ 2>&1 | tee demo.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: demo, path: demo.log, if-no-files-found: ignore }
+
+  supabase:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - uses: supabase/setup-cli@v1
+        with: { version: latest }
+      - name: Start local Supabase
+        run: |
+          mkdir -p /tmp/sb && cd /tmp/sb
+          supabase init < /dev/null
+          supabase start 2>&1 | tail -n 30
+          supabase status -o env > /tmp/sb.env
+          set -a; . /tmp/sb.env; set +a
+          key="${ANON_KEY:-$PUBLISHABLE_KEY}"
+          echo "SUPABASE_URL=$API_URL" >> "$GITHUB_ENV"
+          echo "SUPABASE_ANON_KEY=$key" >> "$GITHUB_ENV"
+          echo "DB_URL=$DB_URL" >> "$GITHUB_ENV"
+          supabase --version
+      - name: schema.sql twice + test-rls.sql on real Supabase
+        run: |
+          {
+            psql "$DB_URL" -X -q -v ON_ERROR_STOP=1 -f supabase/schema.sql && echo "schema.sql pass 1: OK"
+            psql "$DB_URL" -X -q -v ON_ERROR_STOP=1 -f supabase/schema.sql && echo "schema.sql pass 2: OK"
+            psql "$DB_URL" -X -q -v ON_ERROR_STOP=1 -At -F ' | ' -f supabase/test-rls.sql > rls.txt
+            cat rls.txt
+            total=$(grep -c ' | ' rls.txt); lulus=$(grep -c '| LULUS$' rls.txt || true)
+            echo "RLS on real Supabase: $lulus / $total LULUS"
+            test "$total" -gt 0 && test "$total" -eq "$lulus"
+          } 2>&1 | tee supabase-db.log
+      - name: Install Playwright
+        run: pip install playwright==1.48.0 pillow && python -m playwright install --with-deps chromium
+      - name: Browser tests against Supabase
+        run: |
+          (cd web && python -m http.server 8090 --bind 127.0.0.1 > /dev/null 2>&1 &)
+          sleep 2
+          python tests/e2e_supabase.py http://127.0.0.1:8090/ 2>&1 | tee supabase-e2e.log
+      - name: Supabase logs on failure
+        if: failure()
+        run: |
+          for c in $(docker ps --format '{{.Names}}' | grep -E 'auth|rest|storage|kong'); do echo "== $c"; docker logs --tail 60 "$c" 2>&1; done > supabase-services.log || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: supabase
+          path: |
+            supabase-db.log
+            supabase-e2e.log
+            supabase-services.log
+          if-no-files-found: ignore
+
+  lighthouse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - name: Lighthouse (mobile)
+        run: |
+          (cd web && python3 -m http.server 8090 --bind 127.0.0.1 > /dev/null 2>&1 &)
+          sleep 2
+          for page in "home|" "tutorial|#/t/b0000000-0000-4000-8000-000000000001" "product|#/p/a0000000-0000-4000-8000-000000000003"; do
+            name="${page%%|*}"; hash="${page#*|}"
+            npx -y lighthouse@12.2.1 "http://127.0.0.1:8090/$hash" --quiet --chrome-flags="--headless=new --no-sandbox" \
+              --only-categories=performance,accessibility,best-practices --output=json --output-path="lh-$name.json"
+          done
+          python3 tests/lighthouse_check.py lh-home.json lh-tutorial.json lh-product.json 2>&1 | tee lighthouse.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: lighthouse, path: lighthouse.log, if-no-files-found: ignore }
+
+  report:
+    if: always()
+    needs: [static, database, demo, supabase, lighthouse]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { path: out }
+      - name: Publish results to the ci-output branch
+        run: |
+          cd out
+          {
+            echo "commit: $GITHUB_SHA"
+            echo "run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            echo "static: ${{ needs.static.result }}"
+            echo "database: ${{ needs.database.result }}"
+            echo "demo: ${{ needs.demo.result }}"
+            echo "supabase: ${{ needs.supabase.result }}"
+            echo "lighthouse: ${{ needs.lighthouse.result }}"
+          } > status.txt
+          cat status.txt
+          git init -q
+          git checkout -q -b ci-output
+          git add -A
+          git -c user.name=ci -c user.email=ci@users.noreply.github.com commit -qm "Test results for $GITHUB_SHA"
+          git push -fq "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" ci-output
