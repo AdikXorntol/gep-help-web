@@ -80,8 +80,7 @@
   U.BRAND =
     '<svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true" focusable="false">' +
     '<rect width="40" height="40" rx="9" fill="#13202D"/>' +
-    '<path d="M20 6.5c3.6 1.7 7.4 2.4 10.8 2.5v10c0 7.2-4.7 11.9-10.8 14.7C13.9 30.9 9.2 26.2 9.2 19V9C12.6 8.9 16.4 8.2 20 6.5z" fill="#FFC20E"/>' +
-    '<path d="M17 14.3v10.2c0 .7.8 1.1 1.4.7l7.8-5.1c.5-.4.5-1.2 0-1.5l-7.8-5.1c-.6-.4-1.4 0-1.4.8z" fill="#13202D"/>' +
+    '<path d="M20 5.5l11 3.6v9.6c0 7.4-4.6 12.2-11 15.3-6.4-3.1-11-7.9-11-15.3V9.1z" fill="#FFC20E"/><path d="M26.2 16.2A7.6 7.6 0 1 0 27.4 21H20.6" fill="none" stroke="#13202D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M17.6 17.2v6.6c0 .6.7 1 1.2.6l4.3-3.3c.4-.3.4-.9 0-1.2l-4.3-3.3c-.5-.4-1.2 0-1.2.6z" fill="#13202D"/>' +
     '</svg>';
 
   /* ---------- welcome illustrations ---------- */
