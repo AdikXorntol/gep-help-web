@@ -1,0 +1,12 @@
+syntax ok: web/js/admin.js
+syntax ok: web/js/app.js
+syntax ok: web/js/i18n.js
+syntax ok: web/js/store-demo.js
+syntax ok: web/js/store-supabase.js
+syntax ok: web/js/util.js
+syntax ok: web/sw.js
+syntax ok: web/config.js
+json ok: 3 files
+i18n OK: 385 keys in both languages, 373 used in code, unused: aud.semua, aud.staf, err.db-update, reqrole.can.admin, reqrole.can.editor, reqrole.can.pengawal, reqrole.can.staf, reqrole.lastBody.diluluskan, reqrole.lastBody.ditolak, reqrole.st.diluluskan, reqrole.st.ditolak, role.pengawal
+supabase-js: https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js
+supabase-js on CDN: ok (115810 bytes)

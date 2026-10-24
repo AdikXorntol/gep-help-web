@@ -1,0 +1,79 @@
+schema.sql pass 1: OK
+schema.sql pass 2: OK
+psql:/home/runner/work/gep-help-web/gep-help-web/supabase/test-rls.sql:9: NOTICE:  schema "pg_temp" does not exist, skipping
+1 | Profil dicipta automatik semasa daftar | LULUS
+2 | Pengguna baharu menjadi pengawal | LULUS
+3 | Tetamu boleh lihat tutorial terbit | LULUS
+4 | Tetamu tidak nampak draf | LULUS
+5 | Tetamu boleh lihat langkah tutorial terbit | LULUS
+6 | Tetamu tidak nampak tutorial staf sahaja | LULUS
+7 | Tetamu tidak nampak langkah tutorial staf | LULUS
+8 | Tetamu tidak boleh tambah tutorial | LULUS
+9 | Tetamu tidak boleh baca profil | LULUS
+10 | Tetamu tidak boleh baca nota | LULUS
+11 | Pengawal nampak tutorial untuk semua | LULUS
+12 | Pengawal tidak nampak tutorial staf sahaja | LULUS
+13 | Pengawal tidak nampak langkah tutorial staf | LULUS
+14 | Pengawal tidak nampak soalan dalam tutorial staf | LULUS
+15 | Pengawal tidak boleh bertanya dalam tutorial staf | LULUS
+16 | Pengawal tidak boleh simpan nota pada tutorial staf | LULUS
+17 | Pengawal tidak boleh lapor tutorial staf | LULUS
+18 | Pengawal tidak boleh jadikan diri staf | LULUS
+19 | Pengawal boleh tanda tutorial dah faham | LULUS
+20 | Staf nampak tutorial staf sahaja | LULUS
+21 | Staf nampak langkah tutorial staf | LULUS
+22 | Staf tidak boleh edit tutorial | LULUS
+23 | Staf tidak nampak draf | LULUS
+24 | Staf tidak boleh padam produk | LULUS
+25 | Staf tidak boleh jadikan diri admin | LULUS
+26 | Staf boleh tukar bahasa sendiri | LULUS
+27 | Staf tidak boleh ubah profil orang lain | LULUS
+28 | Staf hanya nampak profil sendiri | LULUS
+29 | Staf boleh simpan nota sendiri | LULUS
+30 | Staf tidak boleh baca nota orang lain | LULUS
+31 | Staf tidak boleh tulis nota atas nama orang lain | LULUS
+32 | Staf boleh tanda kegemaran | LULUS
+33 | Staf boleh bertanya tetapi tidak boleh menjawab | LULUS
+34 | Nama penanya diisi automatik | LULUS
+35 | Staf boleh hantar cadangan (status kekal baru) | LULUS
+36 | Pengguna lain tidak nampak cadangan orang lain | LULUS
+37 | Staf boleh laporkan masalah | LULUS
+38 | Staf tidak boleh ubah tetapan | LULUS
+39 | Staf tidak boleh muat naik gambar | LULUS
+40 | Editor tidak boleh padam produk | LULUS
+41 | Editor nampak draf | LULUS
+42 | Tutorial baharu editor disimpan sebagai draf | LULUS
+43 | Editor tidak boleh menerbitkan | LULUS
+44 | Suntingan editor menjadikan tutorial draf semula | LULUS
+45 | Langkah baharu editor menjadikan tutorial draf | LULUS
+46 | Editor menukar siapa boleh lihat menjadikan tutorial draf | LULUS
+47 | Editor nampak tutorial staf sahaja | LULUS
+48 | Editor tidak boleh jadikan diri admin | LULUS
+49 | Pautan gambar luar ditolak | LULUS
+50 | Editor boleh muat naik gambar | LULUS
+51 | Editor tidak nampak kotak masuk admin | LULUS
+52 | Pengawal boleh mohon jadi staf (status kekal baru) | LULUS
+53 | Hanya satu permohonan menunggu pada satu masa | LULUS
+54 | Pemohon tidak boleh meluluskan permohonan sendiri | LULUS
+55 | Tidak boleh memohon atas nama orang lain | LULUS
+56 | Tidak boleh mohon peranan yang sudah dimiliki | LULUS
+57 | Pengguna tidak nampak permohonan orang lain | LULUS
+58 | Staf boleh mohon jadi admin | LULUS
+59 | Pemohon boleh batalkan permohonan yang menunggu | LULUS
+60 | Editor tidak boleh meluluskan permohonan | LULUS
+61 | Admin nampak semua permohonan | LULUS
+62 | Admin meluluskan: peranan pemohon dinaikkan | LULUS
+63 | Permohonan yang sudah diproses tidak boleh diubah | LULUS
+64 | Admin menolak: peranan kekal | LULUS
+65 | Kelulusan tidak menurunkan pengguna yang sudah lebih tinggi | LULUS
+66 | Admin boleh menerbitkan | LULUS
+67 | Admin boleh menjawab soalan | LULUS
+68 | Admin nampak semua cadangan | LULUS
+69 | Admin boleh tukar peranan pengguna | LULUS
+70 | Admin boleh ubah tetapan | LULUS
+71 | Bila log masuk diwajibkan, tetamu tidak nampak tutorial | LULUS
+72 | Bila log masuk diwajibkan, staf masih nampak tutorial | LULUS
+73 | Admin boleh tukar pengguna menjadi pengawal | LULUS
+74 | Bila log masuk diwajibkan, pengawal nampak tutorial untuk semua | LULUS
+75 | Bila log masuk diwajibkan, pengawal tetap tidak nampak tutorial staf | LULUS
+RLS: 75 / 75 LULUS

@@ -1,0 +1,79 @@
+PASS  Mod Supabase aktif
+PASS  Tetamu nampak 3 produk dari pangkalan data
+PASS  Tutorial contoh dengan 3 langkah bergambar
+PASS  Gambar contoh dimuatkan
+PASS  Tetamu tidak nampak soalan (perlu log masuk)
+PASS  Tetamu tidak boleh baca profil melalui API
+PASS  Profil dicipta dengan nama
+PASS  make-admin.sql berjalan
+PASS  Admin masuk panel admin
+PASS  Tutorial baharu disimpan sebagai draf
+PASS  Bulatan diletak pada gambar
+PASS  Langkah bergambar disimpan
+PASS  Gambar dimuat naik ke storan (dimampatkan)
+PASS  Saiz gambar di bawah 300 KB
+PASS  Penanda disimpan sebagai JSON
+PASS  Susunan langkah disimpan
+PASS  Admin menerbitkan tutorial
+PASS  Gambar dari storan dipaparkan
+PASS  Penanda bulatan dipaparkan
+PASS  Bahasa daftar disimpan dalam profil
+PASS  Pendaftaran baharu menjadi pengawal
+PASS  Admin menjadikan tutorial staf sahaja
+PASS  Pengawal tidak nampak produk yang hanya ada tutorial staf
+PASS  Pengawal tidak boleh buka tutorial staf melalui pautan
+PASS  Pangkalan data menolak tutorial staf untuk pengawal (API)
+PASS  Pangkalan data menolak langkah tutorial staf untuk pengawal (API)
+PASS  Tetamu juga tidak nampak tutorial staf (API)
+PASS  Admin menaikkan pengawal menjadi staf
+PASS  Staf nampak tutorial staf sahaja
+PASS  Staf nampak tutorial terbit (EN)
+PASS  Langkah tanpa EN memaparkan label belum diterjemah
+PASS  Nota disimpan
+PASS  Kegemaran disimpan
+PASS  Soalan dihantar
+PASS  Data peribadi dalam pangkalan data
+PASS  Nama penanya diisi oleh pangkalan data
+PASS  Staf disekat menulis produk (RLS)
+PASS  Staf disekat menaikkan peranan sendiri
+PASS  Staf disekat mengubah tutorial
+PASS  Staf tidak boleh buka panel admin
+PASS  Peranti baharu bermula dalam BM
+PASS  Bahasa akaun (EN) diguna pada peranti lain
+PASS  Tukar bahasa disimpan ke profil
+PASS  Tukar semula ke EN disimpan
+PASS  Jawapan admin disimpan
+PASS  Staf nampak jawapan admin
+PASS  Permohonan peranan dihantar
+PASS  Permohonan disimpan dengan butiran pemohon
+PASS  Pemohon hanya nampak permohonan sendiri (API)
+PASS  Pemohon tidak boleh meluluskan sendiri (API)
+PASS  Tab Pengguna menunjukkan lencana permohonan
+PASS  Admin meluluskan permohonan: peranan dinaikkan
+PASS  Senarai pengguna menunjukkan peranan baharu
+PASS  Editor tiada butang Terbitkan
+PASS  Suntingan editor menjadi draf
+PASS  Staf tidak nampak draf
+PASS  Editor disekat memadam produk
+PASS  Admin meluluskan suntingan editor
+PASS  Cadangan dihantar
+PASS  Laporan dihantar
+PASS  Status cadangan dikemas kini
+PASS  Tetapan disimpan
+PASS  Wajib log masuk: tetamu nampak dinding log masuk
+PASS  Wajib log masuk: API tidak memulangkan tutorial kepada tetamu
+PASS  Gambar yatim dicipta untuk ujian
+PASS  Gambar yatim dijumpai
+PASS  Gambar yatim dipadam dari storan
+PASS  Luar talian: website dibuka
+PASS  Luar talian: banner luar talian dipaparkan
+PASS  Luar talian: tutorial dari salinan terakhir
+PASS  Luar talian: gambar dari cache
+PASS  Kata laluan ditukar
+PASS  Kata laluan lama ditolak
+PASS  Log masuk dengan kata laluan baharu
+PASS  Padam langkah membuang gambarnya dari storan
+PASS  Tutorial dipadam bersama data berkaitan
+PASS  Tiada ralat atau amaran konsol
+
+77/77 ujian Supabase LULUS

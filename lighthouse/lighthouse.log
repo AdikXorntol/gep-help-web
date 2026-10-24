@@ -1,0 +1,4 @@
+home (median of 3, performance runs [96, 99, 100]): {'performance': 99, 'accessibility': 100, 'best-practices': 100}  LCP 1.7 s, TBT 0 ms, CLS 0.001
+tutorial (median of 3, performance runs [100, 100, 100]): {'performance': 100, 'accessibility': 100, 'best-practices': 100}  LCP 1.8 s, TBT 0 ms, CLS 0.029
+product (median of 3, performance runs [100, 100, 100]): {'performance': 100, 'accessibility': 100, 'best-practices': 100}  LCP 1.7 s, TBT 0 ms, CLS 0
+LIGHTHOUSE OK (Performance and Accessibility >= 90 on every page)

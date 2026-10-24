@@ -1,0 +1,193 @@
+PASS  Skrin aluan muncul pada lawatan pertama
+PASS  Bahasa pertama ikut pelayar (ms → BM)
+PASS  Tukar bahasa dalam skrin aluan
+PASS  Slaid 2 aluan
+PASS  Aluan ditutup selepas Mula
+PASS  Aluan tidak muncul lagi selepas dimuat semula
+PASS  Aluan boleh dilihat semula
+PASS  Aluan boleh ditutup dengan Escape
+PASS  Bahasa pertama ikut pelayar (en → English)
+PASS  Aluan 1366px: setiap slaid kelihatan, satu demi satu
+PASS  Aluan 1920px: setiap slaid kelihatan, satu demi satu
+PASS  Aluan 390px: setiap slaid kelihatan, satu demi satu
+PASS  EN tanpa teks BM tertinggal: #/
+PASS  Kembali ke BM: #/
+PASS  EN tanpa teks BM tertinggal: #/p/a0000000-0000-4000-8000-000000000001
+PASS  Kembali ke BM: #/p/a0000000-0000-4000-8000-000000000001
+PASS  EN tanpa teks BM tertinggal: #/t/b0000000-0000-4000-8000-000000000001
+PASS  Kembali ke BM: #/t/b0000000-0000-4000-8000-000000000001
+PASS  EN tanpa teks BM tertinggal: #/t/b0000000-0000-4000-8000-000000000001/s/2
+PASS  Kembali ke BM: #/t/b0000000-0000-4000-8000-000000000001/s/2
+PASS  EN tanpa teks BM tertinggal: #/akaun
+PASS  Kembali ke BM: #/akaun
+PASS  EN tanpa teks BM tertinggal: #/admin
+PASS  Kembali ke BM: #/admin
+PASS  EN tanpa teks BM tertinggal: #/admin/kotak
+PASS  Kembali ke BM: #/admin/kotak
+PASS  EN tanpa teks BM tertinggal: #/admin/pengguna
+PASS  Kembali ke BM: #/admin/pengguna
+PASS  EN tanpa teks BM tertinggal: #/admin/tetapan
+PASS  Kembali ke BM: #/admin/tetapan
+PASS  EN tanpa teks BM tertinggal: #/admin/t/b0000000-0000-4000-8000-000000000001
+PASS  Kembali ke BM: #/admin/t/b0000000-0000-4000-8000-000000000001
+PASS  Pilihan bahasa kekal selepas muat semula
+PASS  Pautan tutorial yang tiada: cuba muat semula, kemudian 'Not found'
+PASS  Fallback ke BM dengan label 'Not translated yet'
+PASS  Laman utama memaparkan 2 produk untuk tetamu (OPS untuk staf sahaja)
+PASS  Tetamu: tab Kegemaran minta log masuk
+PASS  Carian menjumpai tutorial
+PASS  Carian tiada hasil memaparkan keadaan kosong
+PASS  Halaman produk
+PASS  Halaman tutorial: 3 langkah bergambar
+PASS  Penanda bulatan dan anak panah dipaparkan
+PASS  Anjakan susun atur rendah semasa gambar dimuatkan (CLS < 0.1)
+PASS  Zoom gambar dibuka
+PASS  Butang zum membesarkan gambar
+PASS  Butang Back menutup zoom tanpa meninggalkan halaman
+PASS  Video YouTube dibenamkan (nocookie)
+PASS  Escape menutup video
+PASS  Mod langkah: Langkah 1 daripada 3
+PASS  Seterusnya → langkah 2
+PASS  Kekunci → ke langkah 3
+PASS  Kekunci ← ke langkah 2
+PASS  Bar kemajuan
+PASS  Kad 'Teruskan' di laman utama
+PASS  Selesai menandakan tutorial faham (tetamu)
+PASS  Tetamu diminta log masuk untuk kegemaran
+PASS  Nota disimpan
+PASS  Nota kekal dalam borang
+PASS  Nota dipadam
+PASS  Borang nota kosong selepas padam
+PASS  Kegemaran sedia ada dibuang
+PASS  Kegemaran ditambah
+PASS  Butang kegemaran aria-pressed
+PASS  Soalan sedia ada dimuatkan
+PASS  Soalan dihantar
+PASS  Soalan baharu dipaparkan
+PASS  Soalan sendiri boleh diubah
+PASS  Staf tiada butang Jawab
+PASS  Dah faham ditanda
+PASS  Laporan dihantar
+PASS  Laman utama ada 3 tab, Produk dipilih
+PASS  Tab Kegemaran menunjukkan bilangan
+PASS  Tab Kegemaran memaparkan tutorial yang disimpan
+PASS  Kekunci anak panah beralih ke tab Baru ditambah
+PASS  Tab Baru ditambah: terbaru di atas
+PASS  Tutorial paling baru diterbitkan berada di atas
+PASS  Tab kekal bila kembali ke laman utama
+PASS  Kembali ke tab Produk
+PASS  Cadangan tanpa topik ditolak
+PASS  Cadangan dihantar
+PASS  Cadangan saya disenaraikan
+PASS  Nama profil dikemas kini
+PASS  Staf tidak boleh masuk panel admin
+PASS  Staf disekat menulis produk melalui API
+PASS  Staf disekat menjawab soalan melalui API
+PASS  Laman staf: tiada kawalan tanpa nama
+PASS  Panel admin: 4 tab
+PASS  Produk: kod wajib
+PASS  Produk: nama BM wajib
+PASS  Produk: warna tidak sah ditolak
+PASS  Produk baharu ditambah (kod huruf besar)
+PASS  Susun produk ke atas
+PASS  Produk diedit
+PASS  Tutorial baharu: produk dipilih
+PASS  Tutorial: tajuk BM wajib
+PASS  Petunjuk pautan video tidak sah
+PASS  Tutorial: pautan video tidak sah ditolak
+PASS  Petunjuk pautan video sah
+PASS  Tutorial disimpan sebagai draf, pautan dinormalkan
+PASS  Langkah baharu dibuka pada tab BM
+PASS  Bulatan diletak pada gambar
+PASS  Anak panah diletak
+PASS  Anak panah diputar
+PASS  Langkah: arahan BM wajib
+PASS  Langkah bergambar disimpan dengan 2 penanda
+PASS  Kedudukan bulatan tepat (±2%)
+PASS  Susun langkah
+PASS  Gambar boleh dibuang dari langkah
+PASS  Statistik terjemahan EN belum lengkap
+PASS  Seret untuk susun langkah
+PASS  Admin menerbitkan tutorial
+PASS  Tutorial terbit dipaparkan dengan video dan 2 langkah
+PASS  Langkah dipadam
+PASS  Batal padam tutorial
+PASS  Tutorial dipadam
+PASS  Produk dipadam
+PASS  Tapis draf
+PASS  Tapis belum ada EN
+PASS  Susun tutorial
+PASS  Kotak masuk: soalan belum dijawab di atas
+PASS  Admin menjawab soalan
+PASS  Status cadangan ditukar
+PASS  Laporan dipadam
+PASS  Peranan pengguna ditukar
+PASS  Admin terakhir tidak boleh diturunkan
+PASS  Pilihan peranan dikembalikan
+PASS  Nombor WhatsApp tidak sah ditolak
+PASS  Tetapan disimpan (nombor dibersihkan)
+PASS  Cari gambar tidak digunakan
+PASS  Panel admin: tiada kawalan tanpa nama
+PASS  Pautan WhatsApp guna nombor baharu
+PASS  Wajib log masuk: tetamu nampak dinding log masuk
+PASS  Editor hanya nampak tab Kandungan
+PASS  Editor disekat dari halaman pengguna
+PASS  Editor tiada butang Terbitkan
+PASS  Suntingan editor: kembali ke draf
+PASS  Status tutorial menjadi draf
+PASS  Editor disekat memadam produk melalui API
+PASS  Staf tidak nampak draf editor
+PASS  Admin nampak draf menunggu kelulusan
+PASS  Admin meluluskan draf editor
+PASS  Tetamu tidak boleh buka tutorial staf melalui pautan
+PASS  Pengawal tidak nampak produk yang hanya ada tutorial staf
+PASS  Pengawal tidak boleh buka tutorial staf melalui pautan
+PASS  Pengawal disekat bertanya dalam tutorial staf (API)
+PASS  Akaun menunjukkan peranan Pengawal
+PASS  Staf nampak semua produk
+PASS  Senarai menandakan tutorial staf sahaja
+PASS  Tutorial staf memaparkan banner staf sahaja
+PASS  Editor tutorial ada pilihan siapa boleh tengok
+PASS  Admin menjadikan tutorial staf sahaja
+PASS  Panel admin menandakan tutorial staf sahaja
+PASS  Pilihan peranan: pengawal, staf, editor, admin
+PASS  Pengawal demo dipaparkan sebagai Pengawal
+PASS  Pengawal tidak nampak tutorial yang baru dijadikan staf sahaja
+PASS  Admin menaikkan pengawal menjadi staf
+PASS  Selepas dinaikkan, pengguna itu nampak tutorial staf
+PASS  Akaun: permohonan menunggu dipaparkan
+PASS  Akaun: tiada butang mohon semasa permohonan menunggu
+PASS  Pemohon boleh batalkan permohonan
+PASS  Pengawal boleh mohon staf, editor atau admin
+PASS  Permohonan dihantar
+PASS  Permohonan baharu menunggu (Editor)
+PASS  Pemohon tidak boleh meluluskan sendiri (API)
+PASS  Tab Pengguna menunjukkan bilangan permohonan
+PASS  Admin nampak permohonan dengan sebab
+PASS  Admin meluluskan permohonan
+PASS  Peranan pengguna dikemas kini dalam senarai
+PASS  Permohonan berpindah ke sejarah
+PASS  Lencana permohonan hilang
+PASS  Pemohon kini editor
+PASS  Akaun menunjukkan permohonan diluluskan
+PASS  Editor hanya boleh mohon peranan lebih tinggi
+PASS  Meluluskan admin perlu pengesahan
+PASS  Admin menolak: peranan kekal editor
+PASS  Akaun menunjukkan permohonan ditolak
+PASS  Admin tiada bahagian mohon peranan
+PASS  Daftar: e-mel tidak sah
+PASS  Daftar: kata laluan pendek
+PASS  Skrin log masuk boleh tukar bahasa, input kekal
+PASS  Daftar berjaya dan log masuk
+PASS  Pengguna baharu menjadi Pengawal
+PASS  Daftar: e-mel sudah wujud
+PASS  Lupa kata laluan menghantar pautan
+PASS  Tiada skrol mendatar pada 360px (BM & EN)
+PASS  Sasaran sentuh ≥ 44px pada 360px
+PASS  Tiada skrol mendatar pada 412px (BM & EN)
+PASS  Sasaran sentuh ≥ 44px pada 412px
+PASS  Luar talian: website masih dibuka dari cache
+PASS  Luar talian: gambar langkah contoh dimuatkan
+PASS  Tiada ralat atau amaran konsol
+
+191/191 ujian LULUS
