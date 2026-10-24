@@ -147,6 +147,24 @@ create table if not exists public.laporan (
   dikemas_kini  timestamptz not null default now()
 );
 
+-- Permohonan peranan: pengguna minta menjadi staf, editor atau admin; admin meluluskan atau menolak.
+create table if not exists public.permohonan_peranan (
+  id              uuid primary key default gen_random_uuid(),
+  user_id         uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  nama            text not null default '',
+  emel            text not null default '',
+  peranan_semasa  text not null default '',
+  peranan         text not null check (peranan in ('staf', 'editor', 'admin')),
+  sebab           text not null default '' check (char_length(sebab) <= 500),
+  status          text not null default 'baru' check (status in ('baru', 'diluluskan', 'ditolak')),
+  diproses_pada   timestamptz,
+  dicipta         timestamptz not null default now(),
+  dikemas_kini    timestamptz not null default now()
+);
+-- Seorang pengguna hanya boleh ada satu permohonan yang menunggu pada satu masa.
+create unique index if not exists permohonan_satu_menunggu on public.permohonan_peranan (user_id) where status = 'baru';
+create index if not exists permohonan_status_idx on public.permohonan_peranan (status, dicipta);
+
 -- ---------------------------------------------------------------------
 -- 2. FUNGSI PEMBANTU (semak peranan tanpa terkena RLS)
 -- ---------------------------------------------------------------------
@@ -169,6 +187,11 @@ as $$ select public.peranan_saya() in ('admin', 'editor'); $$;
 create or replace function public.ialah_staf()
 returns boolean language sql stable security definer set search_path = ''
 as $$ select public.peranan_saya() in ('admin', 'editor', 'staf'); $$;
+
+-- Tahap peranan untuk perbandingan (lebih tinggi = lebih banyak kuasa)
+create or replace function public.tahap_peranan(p text)
+returns integer language sql immutable set search_path = ''
+as $$ select case p when 'admin' then 3 when 'editor' then 2 when 'staf' then 1 when 'pengawal' then 0 else -1 end; $$;
 
 create or replace function public.wajib_log_masuk()
 returns boolean language sql stable security definer set search_path = ''
@@ -199,7 +222,7 @@ $$;
 do $$
 declare t text;
 begin
-  foreach t in array array['profiles', 'tetapan', 'produk', 'tutorial', 'langkah', 'nota', 'soalan', 'cadangan', 'laporan']
+  foreach t in array array['profiles', 'tetapan', 'produk', 'tutorial', 'langkah', 'nota', 'soalan', 'cadangan', 'laporan', 'permohonan_peranan']
   loop
     execute format('drop trigger if exists set_dikemas_kini on public.%I', t);
     execute format('create trigger set_dikemas_kini before update on public.%I
@@ -395,6 +418,67 @@ drop trigger if exists kawal_maklum_balas on public.laporan;
 create trigger kawal_maklum_balas before insert or update on public.laporan
   for each row execute function public.kawal_maklum_balas();
 
+-- 3h. Permohonan peranan: butiran pemohon diisi automatik; hanya admin menukar status;
+--     bila diluluskan, peranan pengguna dinaikkan dalam transaksi yang sama.
+create or replace function public.kawal_permohonan()
+returns trigger language plpgsql security definer set search_path = ''
+as $$
+declare admin boolean := auth.uid() is null or public.ialah_admin();
+begin
+  if tg_op = 'INSERT' then
+    if auth.uid() is not null then
+      new.user_id := auth.uid();
+      new.nama := public.nama_saya();
+      new.emel := coalesce((select p.emel from public.profiles p where p.id = auth.uid()), '');
+      new.peranan_semasa := public.peranan_saya();
+    end if;
+    new.status := 'baru';
+    new.diproses_pada := null;
+    if public.tahap_peranan(new.peranan) <= public.tahap_peranan(new.peranan_semasa) then
+      raise exception 'Anda sudah mempunyai peranan ini atau lebih tinggi.' using errcode = '23514';
+    end if;
+  else
+    new.user_id := old.user_id;
+    new.nama := old.nama;
+    new.emel := old.emel;
+    new.peranan_semasa := old.peranan_semasa;
+    new.peranan := old.peranan;
+    new.sebab := old.sebab;
+    if not admin then
+      new.status := old.status;
+      new.diproses_pada := old.diproses_pada;
+    elsif new.status is distinct from old.status then
+      if old.status <> 'baru' then
+        raise exception 'Permohonan ini sudah diproses.' using errcode = '23514';
+      end if;
+      new.diproses_pada := now();
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists kawal_permohonan on public.permohonan_peranan;
+create trigger kawal_permohonan before insert or update on public.permohonan_peranan
+  for each row execute function public.kawal_permohonan();
+
+create or replace function public.permohonan_diluluskan()
+returns trigger language plpgsql security definer set search_path = ''
+as $$
+begin
+  if new.status = 'diluluskan' and old.status = 'baru' then
+    -- Naikkan sahaja; jangan turunkan pengguna yang sudah dinaikkan lebih tinggi oleh admin.
+    update public.profiles set peranan = new.peranan
+    where id = new.user_id and public.tahap_peranan(peranan) < public.tahap_peranan(new.peranan);
+  end if;
+  return null;
+end;
+$$;
+
+drop trigger if exists permohonan_diluluskan on public.permohonan_peranan;
+create trigger permohonan_diluluskan after update on public.permohonan_peranan
+  for each row execute function public.permohonan_diluluskan();
+
 -- ---------------------------------------------------------------------
 -- 4. KEBENARAN ASAS (RLS di bawah menentukan baris mana yang dibenarkan)
 -- ---------------------------------------------------------------------
@@ -402,7 +486,8 @@ create trigger kawal_maklum_balas before insert or update on public.laporan
 grant usage on schema public to anon, authenticated;
 
 revoke all on public.profiles, public.tetapan, public.produk, public.tutorial, public.langkah,
-  public.nota, public.kegemaran, public.ditonton, public.soalan, public.cadangan, public.laporan
+  public.nota, public.kegemaran, public.ditonton, public.soalan, public.cadangan, public.laporan,
+  public.permohonan_peranan
   from anon, authenticated;
 
 grant select on public.tetapan, public.produk, public.tutorial, public.langkah to anon, authenticated;
@@ -410,12 +495,12 @@ grant update on public.tetapan to authenticated;
 grant insert, update, delete on public.produk, public.tutorial, public.langkah to authenticated;
 grant select, update on public.profiles to authenticated;
 grant select, insert, update, delete on public.nota, public.kegemaran, public.ditonton,
-  public.soalan, public.cadangan, public.laporan to authenticated;
+  public.soalan, public.cadangan, public.laporan, public.permohonan_peranan to authenticated;
 
 revoke execute on function public.peranan_saya(), public.ialah_admin(), public.ialah_penyunting(),
-  public.ialah_staf(), public.wajib_log_masuk(), public.nama_saya() from public;
+  public.ialah_staf(), public.wajib_log_masuk(), public.nama_saya(), public.tahap_peranan(text) from public;
 grant execute on function public.peranan_saya(), public.ialah_admin(), public.ialah_penyunting(),
-  public.ialah_staf(), public.wajib_log_masuk(), public.nama_saya() to anon, authenticated, service_role;
+  public.ialah_staf(), public.wajib_log_masuk(), public.nama_saya(), public.tahap_peranan(text) to anon, authenticated, service_role;
 
 -- ---------------------------------------------------------------------
 -- 5. ROW LEVEL SECURITY
@@ -432,6 +517,7 @@ alter table public.ditonton  enable row level security;
 alter table public.soalan    enable row level security;
 alter table public.cadangan  enable row level security;
 alter table public.laporan   enable row level security;
+alter table public.permohonan_peranan enable row level security;
 
 -- Buang dasar lama supaya fail ini boleh dijalankan semula
 do $$
@@ -441,7 +527,7 @@ begin
     select policyname, tablename from pg_policies
     where schemaname = 'public'
       and tablename in ('profiles', 'tetapan', 'produk', 'tutorial', 'langkah', 'nota', 'kegemaran',
-                        'ditonton', 'soalan', 'cadangan', 'laporan')
+                        'ditonton', 'soalan', 'cadangan', 'laporan', 'permohonan_peranan')
   loop
     execute format('drop policy if exists %I on public.%I', r.policyname, r.tablename);
   end loop;
@@ -540,6 +626,17 @@ create policy laporan_tambah on public.laporan for insert to authenticated
 create policy laporan_ubah on public.laporan for update to authenticated
   using ((select public.ialah_admin())) with check ((select public.ialah_admin()));
 create policy laporan_padam on public.laporan for delete to authenticated
+  using ((user_id = (select auth.uid()) and status = 'baru') or (select public.ialah_admin()));
+
+-- permohonan peranan: pengguna lihat, hantar dan batalkan (bila masih menunggu) milik sendiri;
+-- admin lihat semua dan meluluskan/menolak
+create policy permohonan_baca on public.permohonan_peranan for select to authenticated
+  using (user_id = (select auth.uid()) or (select public.ialah_admin()));
+create policy permohonan_tambah on public.permohonan_peranan for insert to authenticated
+  with check (user_id = (select auth.uid()));
+create policy permohonan_ubah on public.permohonan_peranan for update to authenticated
+  using ((select public.ialah_admin())) with check ((select public.ialah_admin()));
+create policy permohonan_padam on public.permohonan_peranan for delete to authenticated
   using ((user_id = (select auth.uid()) and status = 'baru') or (select public.ialah_admin()));
 
 -- ---------------------------------------------------------------------

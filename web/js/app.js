@@ -72,11 +72,11 @@
   };
 
   function indexCatalog(cat) {
+    // The database already hides staff-only tutorials from guards; this also covers an older offline copy on a shared phone.
+    cat = Object.assign({}, cat, { tutorial: cat.tutorial.filter(function (x) { return !(staffOnly(x) && !isStaff()); }) });
     st.cat = cat; st.prod = {}; st.tut = {}; st.steps = {}; st.tutsOf = {};
     cat.produk.forEach(function (p) { st.prod[p.id] = p; st.tutsOf[p.id] = []; });
     cat.tutorial.forEach(function (x) {
-      // The database already hides these; this also covers an older offline copy on a shared phone.
-      if (staffOnly(x) && !isStaff()) return;
       st.tut[x.id] = x; st.steps[x.id] = [];
       if (st.tutsOf[x.produk_id]) st.tutsOf[x.produk_id].push(x);
     });
@@ -91,10 +91,11 @@
   function refresh() {
     if (app.beforeRefresh) app.beforeRefresh();
     st.refreshing = (st.refreshing || 0) + 1;
+    var who = me() && S.refreshMe ? S.refreshMe().catch(function () { return null; }) : Promise.resolve(null);
     var cat = S.loadCatalog();
     var settings = S.loadSettings().catch(function () { return st.settings; });
     var mine = S.loadMine().catch(function () { return { nota: {}, kegemaran: [], ditonton: [] }; });
-    return Promise.all([cat, settings, mine]).then(function (r) {
+    return Promise.all([cat, settings, mine, who]).then(function (r) {
       indexCatalog(r[0]);
       st.settings = r[1] || st.settings;
       st.mine = r[2];
@@ -289,44 +290,95 @@
     return h;
   };
 
+  var HOME_TABS = [['produk', 'home.tabProducts'], ['fav', 'home.tabFav'], ['baru', 'home.tabNew']];
+  function homeTab() {
+    var tab = st.homeTab || 'produk';
+    return HOME_TABS.some(function (x) { return x[0] === tab; }) ? tab : 'produk';
+  }
+  function favTuts() {
+    return st.mine.kegemaran.map(function (id) { return st.tut[id]; }).filter(function (x) { return x && (x.status === 'terbit' || isEditor()); });
+  }
+  function recentTuts() {
+    return st.cat.tutorial.filter(function (x) { return x.status === 'terbit' && x.diterbit_pada; })
+      .sort(function (a, b) { return String(b.diterbit_pada).localeCompare(String(a.diterbit_pada)); }).slice(0, 10);
+  }
+  function homeTabs(tab, favCount) {
+    return '<div class="seg home-tabs" role="tablist" aria-label="' + esc(t('home.tabsLabel')) + '">' + HOME_TABS.map(function (x) {
+      var on = x[0] === tab;
+      return '<button type="button" role="tab" id="ht-' + x[0] + '" aria-selected="' + on + '" aria-controls="home-panel" tabindex="' + (on ? 0 : -1) + '" data-act="home-tab" data-tab="' + x[0] + '">' +
+        '<span>' + esc(t(x[1])) + '</span>' + (x[0] === 'fav' && favCount ? '<span class="count" aria-label="' + esc(I.tn('home.favCount', favCount, { n: favCount })) + '">' + esc(U.fmtNum(favCount, I.lang)) + '</span>' : '') + '</button>';
+    }).join('') + '</div>';
+  }
+
   function homeBody() {
     if (st.loading) return loadingBox();
     if (st.loadError) return errorBox(st.loadError);
     if (st.settings.wajib_log_masuk && !me()) return loginWall();
-    var h = '';
-    var last = U.local.get('gep_last', null);
-    if (last && st.tut[last.tid] && (st.tut[last.tid].status === 'terbit' || isEditor())) {
-      var lt = st.tut[last.tid], lp = st.prod[lt.produk_id];
-      var total = (st.steps[lt.id] || []).length;
-      var stepN = Math.min(Math.max(1, last.step || 1), Math.max(1, total));
-      h += '<section class="block"><h2 class="sec-h">' + esc(t('home.continue')) + '</h2>' +
-        '<a class="cont" href="#/t/' + esc(lt.id) + (total && last.step ? '/s/' + stepN : '') + '">' + (lp ? patch(lp, 'sm') : '') +
-        '<span class="l-body"><span class="l-title">' + esc(txt(lt, 'tajuk')) + '</span>' +
-        '<span class="l-num">' + esc(total ? t('step.of', { n: stepN, total: total }) : t('tutorial.open')) + '</span></span>' + svg('next', 'chev') + '</a></section>';
+    var tab = homeTab(), favs = favTuts();
+    var h = homeTabs(tab, favs.length) + '<div id="home-panel" class="home-panel" role="tabpanel" aria-labelledby="ht-' + tab + '">';
+
+    if (tab === 'produk') {
+      var last = U.local.get('gep_last', null);
+      if (last && st.tut[last.tid] && (st.tut[last.tid].status === 'terbit' || isEditor())) {
+        var lt = st.tut[last.tid], lp = st.prod[lt.produk_id];
+        var total = (st.steps[lt.id] || []).length;
+        var stepN = Math.min(Math.max(1, last.step || 1), Math.max(1, total));
+        h += '<section class="block"><h2 class="sec-h">' + esc(t('home.continue')) + '</h2>' +
+          '<a class="cont" href="#/t/' + esc(lt.id) + (total && last.step ? '/s/' + stepN : '') + '">' + (lp ? patch(lp, 'sm') : '') +
+          '<span class="l-body"><span class="l-title">' + esc(txt(lt, 'tajuk')) + '</span>' +
+          '<span class="l-num">' + esc(total ? t('step.of', { n: stepN, total: total }) : t('tutorial.open')) + '</span></span>' + svg('next', 'chev') + '</a></section>';
+      }
+      // Products with nothing you can open (e.g. only staff tutorials, for a guard) are left out.
+      var prods = st.cat.produk.filter(function (p) { return isEditor() || visibleTuts(p.id).length; });
+      h += '<section class="block"><h2 class="sec-h">' + esc(t('home.products')) + '</h2>';
+      if (!prods.length) h += emptyBox(t('home.noProducts'), isAdmin() ? t('home.noProductsAdmin') : '');
+      else {
+        h += '<ul class="list">' + prods.map(function (p) {
+          var n = visibleTuts(p.id).length, d = pick(p, 'keterangan');
+          return '<li><a class="product" href="#/p/' + esc(p.id) + '">' + patch(p) + '<span class="p-body"><span class="p-name">' + esc(txt(p, 'nama')) + '</span>' +
+            (d.text ? '<span class="p-meta">' + esc(d.text) + missingTag(d) + '</span>' : '') +
+            '<span class="p-count">' + esc(n ? I.tn('product.count', n, { n: U.fmtNum(n, I.lang) }) : t('product.empty')) + '</span></span>' + svg('chev', 'chev') + '</a></li>';
+        }).join('') + '</ul>';
+      }
+      h += '</section>';
+    } else if (tab === 'fav') {
+      h += '<section class="block"><h2 class="sec-h">' + svg('starOn', 'h-ic') + esc(t('home.favourites')) + '</h2>';
+      if (favs.length) h += '<ul class="log">' + favs.map(function (x) { return tutRow(x); }).join('') + '</ul>';
+      else if (!me()) h += emptyBox(t('home.favGuestTitle'), t('home.favGuestBody'), '<button type="button" class="btn primary" data-act="login">' + esc(t('auth.signIn')) + '</button>');
+      else h += emptyBox(t('home.favEmptyTitle'), t('home.favEmptyBody'));
+      h += '</section>';
+    } else {
+      var fresh = recentTuts();
+      h += '<section class="block"><h2 class="sec-h">' + esc(t('home.new')) + '</h2>';
+      if (fresh.length) h += '<ul class="log">' + fresh.map(function (x) { return tutRow(x); }).join('') + '</ul>';
+      else h += emptyBox(t('home.newEmptyTitle'), t('home.newEmptyBody'));
+      h += '</section>';
     }
-    // Products with nothing you can open (e.g. only staff tutorials, for a guard) are left out.
-    var prods = st.cat.produk.filter(function (p) { return isEditor() || visibleTuts(p.id).length; });
-    h += '<section class="block"><h2 class="sec-h">' + esc(t('home.products')) + '</h2>';
-    if (!prods.length) h += emptyBox(t('home.noProducts'), isAdmin() ? t('home.noProductsAdmin') : '');
-    else {
-      h += '<ul class="list">' + prods.map(function (p) {
-        var n = visibleTuts(p.id).length, d = pick(p, 'keterangan');
-        return '<li><a class="product" href="#/p/' + esc(p.id) + '">' + patch(p) + '<span class="p-body"><span class="p-name">' + esc(txt(p, 'nama')) + '</span>' +
-          (d.text ? '<span class="p-meta">' + esc(d.text) + missingTag(d) + '</span>' : '') +
-          '<span class="p-count">' + esc(n ? I.tn('product.count', n, { n: U.fmtNum(n, I.lang) }) : t('product.empty')) + '</span></span>' + svg('chev', 'chev') + '</a></li>';
-      }).join('') + '</ul>';
-    }
-    h += '</section>';
-    var favs = st.mine.kegemaran.map(function (id) { return st.tut[id]; }).filter(function (x) { return x && (x.status === 'terbit' || isEditor()); });
-    if (favs.length) {
-      h += '<section class="block"><h2 class="sec-h">' + svg('starOn', 'h-ic') + esc(t('home.favourites')) + '</h2><ul class="log">' + favs.map(function (x) { return tutRow(x); }).join('') + '</ul></section>';
-    }
-    var fresh = st.cat.tutorial.filter(isNew).sort(function (a, b) { return String(b.diterbit_pada).localeCompare(String(a.diterbit_pada)); }).slice(0, 5);
-    if (fresh.length) {
-      h += '<section class="block"><h2 class="sec-h">' + esc(t('home.new')) + '</h2><ul class="log">' + fresh.map(function (x) { return tutRow(x); }).join('') + '</ul></section>';
-    }
-    h += footer();
+    h += '</div>' + footer();
     return h;
+  }
+
+  app.ACT['home-tab'] = function (el) {
+    var tab = el.dataset.tab;
+    if (tab === homeTab()) return;
+    st.homeTab = tab;
+    render();
+    var b = document.getElementById('ht-' + tab);
+    if (b) b.focus({ preventScroll: true });
+  };
+  // Arrow keys move between the home tabs (standard tab keyboard pattern).
+  function homeTabKey(e) {
+    var cur = e.target.closest && e.target.closest('[data-act="home-tab"]');
+    if (!cur || ['ArrowLeft', 'ArrowRight', 'Home', 'End'].indexOf(e.key) < 0) return false;
+    var ids = HOME_TABS.map(function (x) { return x[0]; });
+    var i = ids.indexOf(cur.dataset.tab);
+    if (e.key === 'ArrowRight') i = (i + 1) % ids.length;
+    else if (e.key === 'ArrowLeft') i = (i + ids.length - 1) % ids.length;
+    else if (e.key === 'Home') i = 0;
+    else i = ids.length - 1;
+    e.preventDefault();
+    app.ACT['home-tab']({ dataset: { tab: ids[i] } });
+    return true;
   }
 
   function footer() {
@@ -548,6 +600,7 @@
       '<form data-form="profile"><div class="field"><label for="acct-nama">' + esc(t('account.name')) + '</label>' +
       '<input id="acct-nama" name="nama" maxlength="80" autocomplete="name" value="' + esc(m.nama) + '"></div>' +
       '<div class="btn-row"><button type="submit" class="btn primary">' + esc(t('form.save')) + '</button></div></form></section>' +
+      (m.peranan !== 'admin' ? '<section class="box"><h2>' + esc(t('reqrole.title')) + '</h2><div id="my-role"><p class="muted" aria-busy="true">' + esc(t('state.loading')) + '</p></div></section>' : '') +
       '<section class="box"><h2>' + esc(t('lang.label')) + '</h2><p class="muted">' + esc(t('account.langHint')) + '</p>' + langToggle() + '</section>' +
       '<section class="box"><h2>' + esc(t('suggest.mine')) + '</h2><div id="my-sugg"><p class="muted" aria-busy="true">' + esc(t('state.loading')) + '</p></div>' +
       '<button type="button" class="btn" data-act="suggest">' + svg('plus') + esc(t('suggest.button')) + '</button></section>' +
@@ -557,8 +610,36 @@
       '<button type="button" class="btn danger-o" data-act="logout">' + svg('logout') + esc(t('auth.signOut')) + '</button></div></section>';
     return h + '</main>';
   };
+  var ROLE_RANK = { tetamu: -1, pengawal: 0, staf: 1, editor: 2, admin: 3 };
+  function higherRoles() { return ['staf', 'editor', 'admin'].filter(function (r) { return ROLE_RANK[r] > ROLE_RANK[role()]; }); }
+  function roleBox(rows) {
+    var pending = rows.filter(function (r) { return r.status === 'baru'; })[0];
+    var last = rows.filter(function (r) { return r.status !== 'baru'; })[0];
+    var h = '<p>' + esc(t('reqrole.now', { role: t('role.' + role()) })) + ' ' + esc(t('reqrole.can.' + role())) + '</p>';
+    if (pending) {
+      return h + '<div class="req-card s-baru"><p><span class="st-chip s-baru">' + esc(t('reqrole.pending')) + '</span> ' +
+        esc(t('reqrole.pendingBody', { role: t('role.' + pending.peranan), date: U.fmtDate(pending.dicipta, I.lang) })) + '</p>' +
+        (pending.sebab ? '<p class="muted">“' + esc(pending.sebab) + '”</p>' : '') +
+        '<button type="button" class="btn danger-o" data-act="role-req-cancel" data-id="' + esc(pending.id) + '">' + esc(t('reqrole.cancel')) + '</button></div>';
+    }
+    if (last) {
+      h += '<p class="req-last"><span class="st-chip s-' + (last.status === 'diluluskan' ? 'selesai' : 'ditolak') + '">' + esc(t('reqrole.st.' + last.status)) + '</span> ' +
+        esc(t('reqrole.lastBody.' + last.status, { role: t('role.' + last.peranan), date: U.fmtDate(last.diproses_pada || last.dicipta, I.lang) })) + '</p>';
+    }
+    if (higherRoles().length) h += '<button type="button" class="btn" data-act="role-req">' + svg('plus') + esc(t('reqrole.button')) + '</button>';
+    return h;
+  }
   app.after.akaun = function () {
     if (!me()) return;
+    if (role() !== 'admin' && S.listMyRoleRequests) {
+      S.listMyRoleRequests().then(function (rows) {
+        var box = document.getElementById('my-role');
+        if (box) box.innerHTML = roleBox(rows || []);
+      }, function (err) {
+        var box = document.getElementById('my-role');
+        if (box) box.innerHTML = '<p class="muted">' + esc(errText(err)) + '</p>';
+      });
+    }
     S.listCadanganSaya().then(function (rows) {
       var box = document.getElementById('my-sugg');
       if (!box) return;
@@ -899,6 +980,42 @@
       if (st.route && st.route.name === 'akaun') render();
     }, function (e) { busy(btn, false); err.textContent = errText(e); });
   };
+  app.ACT['role-req'] = function () {
+    if (!me()) { openLogin('in'); return; }
+    var roles = higherRoles();
+    if (!roles.length) return;
+    sheet({
+      title: t('reqrole.sheetTitle'),
+      body: function () {
+        return '<p class="sheet-sub">' + esc(t('reqrole.sheetBody')) + '</p><form data-form="role-req" novalidate>' +
+          '<fieldset class="field"><legend>' + esc(t('reqrole.which')) + '</legend><div class="radios">' +
+          roles.map(function (r, i) {
+            return '<label class="radio tall"><input type="radio" name="peranan" value="' + r + '"' + (i === 0 ? ' checked' : '') + '>' +
+              '<span><b>' + esc(t('role.' + r)) + '</b><small>' + esc(t('reqrole.can.' + r)) + '</small></span></label>';
+          }).join('') + '</div></fieldset>' +
+          '<div class="field"><label for="rq-s">' + esc(t('reqrole.reason')) + '</label><textarea id="rq-s" name="sebab" rows="3" maxlength="500" placeholder="' + esc(t('reqrole.reasonPh')) + '"></textarea></div>' +
+          '<p class="err" role="alert"></p><div class="btn-row"><button type="submit" class="btn primary">' + svg('send') + esc(t('reqrole.send')) + '</button></div></form>';
+      }
+    });
+  };
+  app.FORM['role-req'] = function (f) {
+    var err = f.querySelector('.err');
+    var pick = f.querySelector('input[name=peranan]:checked');
+    if (!pick) { err.textContent = t('reqrole.needRole'); return; }
+    var btn = f.querySelector('[type=submit]');
+    busy(btn, true);
+    S.requestRole(pick.value, f.sebab.value).then(function () {
+      closeLayer(layerOf(f)); toast(t('reqrole.sent'));
+      if (st.route && st.route.name === 'akaun') render();
+    }, function (e) { busy(btn, false); err.textContent = errText(e); });
+  };
+  app.ACT['role-req-cancel'] = function (el) {
+    confirmBox({ title: t('reqrole.cancelQ'), yes: t('reqrole.cancel'), danger: true }).then(function (ok) {
+      if (!ok) return;
+      S.cancelRoleRequest(el.dataset.id).then(function () { toast(t('reqrole.cancelled')); render(); }, function (e) { toast(errText(e), 'err'); });
+    });
+  };
+
   app.ACT['sugg-del'] = function (el) {
     confirmBox({ title: t('suggest.deleteQ'), yes: t('admin.delete'), danger: true }).then(function (ok) {
       if (!ok) return;
@@ -1105,6 +1222,7 @@
       if (e.key === 'Tab') trapFocus(e, layers[layers.length - 1].el);
       return;
     }
+    if (homeTabKey(e)) return;
     var m = document.querySelector('.stepmode');
     if (m && !/input|textarea|select/i.test((e.target.tagName || ''))) {
       var n = +m.dataset.n, total = +m.dataset.total;

@@ -1,7 +1,7 @@
 /* GEP Help service worker: keeps the app shell and recently viewed pictures available offline.
    Same-origin files: network first (always fresh when online), cache as fallback.
    Pictures from Supabase Storage and the supabase-js library: cache first. */
-var VERSION = 'gep-help-v1.1.0';
+var VERSION = 'gep-help-v1.2.0';
 var SHELL = [
   './', 'index.html', 'config.js', 'manifest.webmanifest', 'css/app.css',
   'js/util.js', 'js/i18n.js', 'js/store-demo.js', 'js/store-supabase.js', 'js/app.js', 'js/admin.js',

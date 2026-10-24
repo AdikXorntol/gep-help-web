@@ -91,6 +91,7 @@ Siap! Anda boleh mula menambah tutorial.
   - *Staf*: tengok semua tutorial, termasuk yang ditanda *Staf sahaja*.
   - *Editor*: seperti staf, dan boleh tambah/ubah tutorial; perubahan menjadi draf sehingga admin menerbitkannya.
   - *Admin*: urus semua.
+- **Permohonan peranan:** pengguna boleh mohon menjadi Staf, Editor atau Admin di **Akaun saya → Peranan anda → Mohon peranan lain**. Admin nampak permohonan di **Panel admin → Pengguna** (ada nombor merah pada tab) dan tekan **Luluskan** atau **Tolak**. Bila diluluskan, peranan berubah serta-merta.
 - **Tutorial untuk staf sahaja:** semasa edit tutorial, pilih *Siapa boleh tengok tutorial ini? → Staf sahaja*. Pengawal tidak nampak tutorial itu, langkahnya atau soalan di dalamnya, walaupun mereka ada pautannya. Produk yang hanya ada tutorial staf disembunyikan daripada pengawal.
 - **Sembunyikan semua tutorial daripada orang yang belum log masuk:** Panel admin → Tetapan → hidupkan *Wajib log masuk*.
 - **Butang WhatsApp:** Panel admin → Tetapan → nombor WhatsApp support (contoh `60123456789`).

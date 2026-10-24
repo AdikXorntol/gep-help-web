@@ -13,6 +13,8 @@ Selagi `web/config.js` kosong, website berjalan dalam **mod demo** (data contoh 
 - Dwibahasa BM/EN: butang **BM | EN** di setiap halaman; kandungan tutorial juga ada medan BM dan EN.
 - Peranan: **Pengawal** (lalai bila daftar), **Staf**, **Editor**, **Admin**. Tutorial boleh ditanda *Staf sahaja*; pengawal tidak nampak tutorial itu (disekat dalam pangkalan data, bukan sekadar disorok).
 - Pengawal dan staf: nota peribadi, kegemaran, tanda "Dah faham", soalan/komen, cadang tutorial, laporkan masalah.
+- Laman utama dibahagikan kepada tab **Produk**, **Kegemaran** dan **Baru ditambah**.
+- Permohonan peranan: pengguna mohon menjadi Staf/Editor/Admin dari halaman akaun; admin meluluskan atau menolak di tab Pengguna (peranan dinaikkan oleh pangkalan data dalam transaksi yang sama).
 - Admin: tambah/edit/padam/susun produk, tutorial dan langkah; muat naik gambar (dikecilkan automatik); kotak masuk; urus peranan pengguna; tetapan WhatsApp dan "wajib log masuk".
 - Editor: tambah dan edit tutorial sebagai draf; admin yang menerbitkan.
 - Boleh dipasang ke skrin utama telefon (PWA) dan dibuka semula tanpa internet (salinan terakhir).

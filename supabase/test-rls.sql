@@ -202,6 +202,50 @@ begin
     r := pg_temp.sebagai(u_edit, 'select 1 from public.cadangan');
     hasil := hasil || array['Editor tidak nampak kotak masuk admin', case when r = 'ok:0' then 'LULUS' else 'GAGAL (' || r || ')' end];
 
+    -- ---------------- Permohonan peranan ----------------
+    r := pg_temp.sebagai(u_lain, format('insert into public.permohonan_peranan (peranan, sebab, status) values (%L, %L, %L)', 'staf', 'Saya penyelia tapak', 'diluluskan'));
+    hasil := hasil || array['Pengawal boleh mohon jadi staf (status kekal baru)',
+      case when r = 'ok:1' and (select string_agg(status || '|' || peranan_semasa || '|' || nama, ',') from public.permohonan_peranan where user_id = u_lain) = 'baru|pengawal|Ujian Lain'
+           and (select peranan from public.profiles where id = u_lain) = 'pengawal' then 'LULUS' else 'GAGAL (' || r || ')' end];
+    r := pg_temp.sebagai(u_lain, format('insert into public.permohonan_peranan (peranan) values (%L)', 'admin'));
+    hasil := hasil || array['Hanya satu permohonan menunggu pada satu masa', case when r like 'ralat:%' then 'LULUS' else 'GAGAL (' || r || ')' end];
+    r := pg_temp.sebagai(u_lain, format('update public.permohonan_peranan set status = %L where user_id = %L', 'diluluskan', u_lain));
+    hasil := hasil || array['Pemohon tidak boleh meluluskan permohonan sendiri',
+      case when (select string_agg(status, ',' order by dicipta) from public.permohonan_peranan where user_id = u_lain) = 'baru' and (select peranan from public.profiles where id = u_lain) = 'pengawal' then 'LULUS' else 'GAGAL (' || r || ')' end];
+    r := pg_temp.sebagai(u_lain, format('insert into public.permohonan_peranan (user_id, peranan) values (%L, %L)', u_staf, 'admin'));
+    hasil := hasil || array['Tidak boleh memohon atas nama orang lain',
+      case when not exists (select 1 from public.permohonan_peranan where user_id = u_staf) then 'LULUS' else 'GAGAL (' || r || ')' end];
+    r := pg_temp.sebagai(u_staf, format('insert into public.permohonan_peranan (peranan) values (%L)', 'staf'));
+    hasil := hasil || array['Tidak boleh mohon peranan yang sudah dimiliki', case when r like 'ralat:%' then 'LULUS' else 'GAGAL (' || r || ')' end];
+    r := pg_temp.sebagai(u_staf, 'select 1 from public.permohonan_peranan');
+    hasil := hasil || array['Pengguna tidak nampak permohonan orang lain', case when r = 'ok:0' then 'LULUS' else 'GAGAL (' || r || ')' end];
+    r := pg_temp.sebagai(u_staf, format('insert into public.permohonan_peranan (peranan, sebab) values (%L, %L)', 'admin', 'Mohon admin'));
+    hasil := hasil || array['Staf boleh mohon jadi admin', case when r = 'ok:1' then 'LULUS' else 'GAGAL (' || r || ')' end];
+    r := pg_temp.sebagai(u_staf, format('delete from public.permohonan_peranan where user_id = %L', u_staf));
+    hasil := hasil || array['Pemohon boleh batalkan permohonan yang menunggu',
+      case when r = 'ok:1' and not exists (select 1 from public.permohonan_peranan where user_id = u_staf) then 'LULUS' else 'GAGAL (' || r || ')' end];
+    r := pg_temp.sebagai(u_edit, format('update public.permohonan_peranan set status = %L where user_id = %L', 'diluluskan', u_lain));
+    hasil := hasil || array['Editor tidak boleh meluluskan permohonan',
+      case when (select string_agg(status, ',' order by dicipta) from public.permohonan_peranan where user_id = u_lain) = 'baru' then 'LULUS' else 'GAGAL (' || r || ')' end];
+    r := pg_temp.sebagai(u_admin, 'select 1 from public.permohonan_peranan');
+    hasil := hasil || array['Admin nampak semua permohonan', case when r = 'ok:1' then 'LULUS' else 'GAGAL (' || r || ')' end];
+    r := pg_temp.sebagai(u_admin, format('update public.permohonan_peranan set status = %L where user_id = %L', 'diluluskan', u_lain));
+    hasil := hasil || array['Admin meluluskan: peranan pemohon dinaikkan',
+      case when r = 'ok:1' and (select peranan from public.profiles where id = u_lain) = 'staf'
+           and (select bool_and(diproses_pada is not null) from public.permohonan_peranan where user_id = u_lain) then 'LULUS' else 'GAGAL (' || r || ')' end];
+    r := pg_temp.sebagai(u_admin, format('update public.permohonan_peranan set status = %L where user_id = %L', 'ditolak', u_lain));
+    hasil := hasil || array['Permohonan yang sudah diproses tidak boleh diubah', case when r like 'ralat:%' and (select string_agg(status, ',' order by dicipta) from public.permohonan_peranan where user_id = u_lain) = 'diluluskan' then 'LULUS' else 'GAGAL (' || r || ')' end];
+    r := pg_temp.sebagai(u_edit, format('insert into public.permohonan_peranan (peranan) values (%L)', 'admin'));
+    r := pg_temp.sebagai(u_admin, format('update public.permohonan_peranan set status = %L where user_id = %L and status = %L', 'ditolak', u_edit, 'baru'));
+    hasil := hasil || array['Admin menolak: peranan kekal',
+      case when r = 'ok:1' and (select peranan from public.profiles where id = u_edit) = 'editor' then 'LULUS' else 'GAGAL (' || r || ')' end];
+    r := pg_temp.sebagai(u_lain, format('insert into public.permohonan_peranan (peranan) values (%L)', 'editor'));
+    update public.profiles set peranan = 'admin' where id = u_lain;
+    r := pg_temp.sebagai(u_admin, format('update public.permohonan_peranan set status = %L where user_id = %L and status = %L', 'diluluskan', u_lain, 'baru'));
+    hasil := hasil || array['Kelulusan tidak menurunkan pengguna yang sudah lebih tinggi',
+      case when r = 'ok:1' and (select peranan from public.profiles where id = u_lain) = 'admin' then 'LULUS' else 'GAGAL (' || r || ')' end];
+    update public.profiles set peranan = 'staf' where id = u_lain;
+
     -- ---------------- Admin ----------------
     r := pg_temp.sebagai(u_admin, format('update public.tutorial set status = %L where id = %L', 'terbit', t_draf));
     hasil := hasil || array['Admin boleh menerbitkan', case when (select status from public.tutorial where id = t_draf) = 'terbit' then 'LULUS' else 'GAGAL (' || r || ')' end];

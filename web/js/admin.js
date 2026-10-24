@@ -6,7 +6,7 @@
   function S() { return app.S; }
 
   var adm = { filter: 'semua', inbox: null, inboxTab: 'soalan', users: null, orphans: null, ftab: 'ms', loadingInbox: false, loadingUsers: false };
-  var VERSION = '1.1.0';
+  var VERSION = '1.2.0';
 
   function langComplete(tu, lang) {
     if (!String(tu['tajuk_' + lang] || '').trim()) return false;
@@ -31,10 +31,12 @@
         adm.inbox.laporan.filter(function (c) { return c.status === 'baru'; }).length;
       if (n) badge = '<span class="badge" aria-label="' + esc(I.tn('admin.newCount', n)) + '">' + n + '</span>';
     }
+    var nReq = pendingRequests().length;
+    var reqBadge = nReq ? '<span class="badge" aria-label="' + esc(I.tn('reqadm.count', nReq)) + '">' + nReq + '</span>' : '';
     return app.topbar('#/', esc(t('admin.panel'))) + '<main class="page admin">' + app.banners() +
       '<div class="adm-head"><h1 class="page-h">' + esc(t('admin.panel')) + '</h1><span class="role-chip r-' + esc(H.role()) + '">' + esc(t('role.' + H.role())) + '</span></div>' +
       '<nav class="tabs" aria-label="' + esc(t('admin.panel')) + '">' + tabs.map(function (x) {
-        return '<a href="' + x[1] + '"' + (x[0] === active ? ' aria-current="page"' : '') + '>' + svg(x[2]) + '<span>' + esc(t(x[3])) + '</span>' + (x[0] === 'kotak' ? badge : '') + '</a>';
+        return '<a href="' + x[1] + '"' + (x[0] === active ? ' aria-current="page"' : '') + '>' + svg(x[2]) + '<span>' + esc(t(x[3])) + '</span>' + (x[0] === 'kotak' ? badge : x[0] === 'pengguna' ? reqBadge : '') + '</a>';
       }).join('') + '</nav>' + body + '</main>';
   }
 
@@ -71,9 +73,16 @@
       loadUsers();
     }
   };
+  function pendingRequests() { return (adm.requests || []).filter(function (r) { return r.status === 'baru'; }); }
+  // Role requests load with the inbox (for the badge) and with the user list. A failure here
+  // (e.g. the database not updated yet) must not break the rest of the panel.
+  function loadRequests() {
+    if (!S().listRoleRequests) return Promise.resolve();
+    return S().listRoleRequests().then(function (x) { adm.requests = x; adm.requestsErr = null; }, function (e) { adm.requestsErr = e; });
+  }
   function loadInbox() {
     adm.loadingInbox = true;
-    S().listInbox().then(function (x) { adm.inbox = x; adm.inboxErr = null; }, function (e) { adm.inboxErr = e; }).then(function () {
+    Promise.all([S().listInbox(), loadRequests()]).then(function (x) { adm.inbox = x[0]; adm.inboxErr = null; }, function (e) { adm.inboxErr = e; }).then(function () {
       adm.inboxAt = Date.now(); // also after an error, so a failing request isn't retried on every render
       adm.loadingInbox = false;
       if (st.route && st.route.name === 'admin') app.render();
@@ -81,7 +90,7 @@
   }
   function loadUsers() {
     adm.loadingUsers = true;
-    S().listUsers().then(function (x) { adm.users = x; adm.usersErr = null; }, function (e) { adm.usersErr = e; }).then(function () {
+    Promise.all([S().listUsers(), loadRequests()]).then(function (x) { adm.users = x[0]; adm.usersErr = null; }, function (e) { adm.usersErr = e; }).then(function () {
       adm.usersAt = Date.now();
       adm.loadingUsers = false;
       if (st.route && st.route.name === 'admin') app.render();
@@ -90,7 +99,7 @@
   // Signing in as someone else must not show the previous person's admin data.
   app.beforeRefresh = function () {
     var who = H.me() ? H.me().id : '';
-    if (adm.who !== who) { adm.who = who; adm.inbox = null; adm.inboxErr = null; adm.inboxAt = 0; adm.users = null; adm.usersErr = null; adm.usersAt = 0; adm.orphans = null; }
+    if (adm.who !== who) { adm.who = who; adm.inbox = null; adm.inboxErr = null; adm.inboxAt = 0; adm.users = null; adm.usersErr = null; adm.usersAt = 0; adm.requests = null; adm.requestsErr = null; adm.orphans = null; }
   };
 
   /* ======================= content ======================= */
@@ -649,10 +658,67 @@
   };
 
   /* ======================= users ======================= */
+  function roleChip(r) { return '<span class="role-chip r-' + esc(r) + '">' + esc(t('role.' + r)) + '</span>'; }
+  function viewRequests() {
+    if (adm.requestsErr && !adm.requests) return '<p class="note-box">' + svg('info') + esc(H.errText(adm.requestsErr)) + '</p>';
+    var pend = pendingRequests();
+    var done = (adm.requests || []).filter(function (r) { return r.status !== 'baru'; }).slice(0, 20);
+    var h = '<section class="box reqs-box" aria-labelledby="reqs-h"><h2 id="reqs-h">' + svg('users', 'h-ic') + esc(t('reqadm.title')) +
+      (pend.length ? ' <span class="badge">' + pend.length + '</span>' : '') + '</h2>';
+    if (!pend.length) h += '<p class="muted">' + esc(t('reqadm.none')) + '</p>';
+    else h += '<ul class="plain reqs">' + pend.map(function (r) {
+      return '<li data-req="' + esc(r.id) + '"><div class="grow"><b>' + esc(r.nama || r.emel.split('@')[0]) + '</b> <span class="muted u-mail">' + esc(r.emel) + '</span>' +
+        '<p class="req-roles">' + roleChip(r.peranan_semasa || 'pengawal') + ' <span aria-hidden="true">→</span><span class="vh">' + esc(t('reqadm.to')) + '</span> ' + roleChip(r.peranan) + '</p>' +
+        (r.sebab ? '<p class="req-why">“' + esc(r.sebab) + '”</p>' : '') +
+        '<span class="muted">' + esc(t('reqadm.sent', { date: U.fmtDate(r.dicipta, I.lang) })) + '</span></div>' +
+        '<div class="btn-row"><button type="button" class="btn ok" data-act="req-decide" data-id="' + esc(r.id) + '" data-s="diluluskan">' + svg('check') + esc(t('reqadm.approve')) + '</button>' +
+        '<button type="button" class="btn danger-o" data-act="req-decide" data-id="' + esc(r.id) + '" data-s="ditolak">' + esc(t('reqadm.decline')) + '</button></div></li>';
+    }).join('') + '</ul>';
+    if (done.length) h += '<details class="req-history"><summary>' + esc(I.tn('reqadm.history', done.length)) + '</summary><ul class="plain">' + done.map(function (r) {
+      return '<li><b>' + esc(r.nama || r.emel.split('@')[0]) + '</b> → ' + roleChip(r.peranan) +
+        ' <span class="st-chip s-' + (r.status === 'diluluskan' ? 'selesai' : 'ditolak') + '">' + esc(t('reqrole.st.' + r.status)) + '</span>' +
+        '<span class="muted"> · ' + esc(U.fmtDate(r.diproses_pada || r.dicipta, I.lang)) + '</span></li>';
+    }).join('') + '</ul></details>';
+    return h + '</section>';
+  }
+  app.ACT['req-decide'] = function (el) {
+    var r = (adm.requests || []).filter(function (x) { return x.id === el.dataset.id; })[0];
+    if (!r) return;
+    var approve = el.dataset.s === 'diluluskan';
+    var who = r.nama || r.emel;
+    var ask = approve && r.peranan === 'admin'
+      ? app.confirm({ title: t('reqadm.adminQ', { name: who }), body: t('reqadm.adminQBody'), yes: t('reqadm.approve') })
+      : Promise.resolve(true);
+    ask.then(function (ok) {
+      if (!ok) return;
+      var btns = document.querySelectorAll('[data-act="req-decide"][data-id="' + r.id + '"]');
+      btns.forEach(function (b) { H.busy(b, true); });
+      S().decideRoleRequest(r.id, el.dataset.s).then(function (row) {
+        Object.assign(r, row);
+        if (approve) {
+          var u = (adm.users || []).filter(function (x) { return x.id === r.user_id; })[0];
+          var rank = { pengawal: 0, staf: 1, editor: 2, admin: 3 };
+          if (u && (rank[u.peranan] || 0) < rank[r.peranan]) {
+            u.peranan = r.peranan;
+            // The re-render keeps form values as they were; update this one so it shows the new role.
+            var sel = document.getElementById('role-' + u.id);
+            if (sel) sel.value = r.peranan;
+          }
+        }
+        app.toast(t(approve ? 'reqadm.approved' : 'reqadm.declined', { name: who, role: t('role.' + r.peranan) }));
+        app.render();
+      }, function (e) {
+        btns.forEach(function (b) { H.busy(b, false); });
+        app.toast(H.errText(e), 'err');
+        loadRequests().then(app.render);
+      });
+    });
+  };
+
   function viewUsers() {
     if (adm.usersErr && !adm.users) return app.errorBox(adm.usersErr);
     if (!adm.users) return app.loadingBox();
-    return '<p class="muted">' + esc(t('users.intro')) + '</p><ul class="users">' + adm.users.map(function (u) {
+    return viewRequests() + '<h2 class="sec-h">' + esc(t('reqadm.allUsers')) + '</h2><p class="muted">' + esc(t('users.intro')) + '</p><ul class="users">' + adm.users.map(function (u) {
       var self = H.me() && u.id === H.me().id;
       return '<li class="box"><div class="grow"><b>' + esc(u.nama || u.emel.split('@')[0]) + (self ? ' <span class="muted">(' + esc(t('users.you')) + ')</span>' : '') + '</b>' +
         '<span class="muted u-mail">' + esc(u.emel) + '</span>' + (u.dicipta ? '<span class="muted">' + esc(t('users.joined', { date: U.fmtDate(u.dicipta, I.lang) })) + '</span>' : '') + '</div>' +

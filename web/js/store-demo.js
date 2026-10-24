@@ -28,7 +28,7 @@
         { id: P.ops, kod: 'OPS', nama_ms: 'GEP OPS', nama_en: 'GEP OPS', keterangan_ms: 'Konsol penyelia untuk pantau pengawal dan buat laporan.', keterangan_en: 'The supervisor console to monitor guards and build reports.', warna: '#2563B8', susunan: 2 },
         { id: P.lite, kod: 'LITE', nama_ms: 'GEP LITE', nama_en: 'GEP LITE', keterangan_ms: 'Versi ringan untuk daftar masuk dengan cepat.', keterangan_en: 'A lighter version for quick check-ins.', warna: '#2E9A63', susunan: 3 }
       ],
-      tutorial: [], langkah: [], nota: [], kegemaran: [], ditonton: [], soalan: [], cadangan: [], laporan: [],
+      tutorial: [], langkah: [], nota: [], kegemaran: [], ditonton: [], soalan: [], cadangan: [], laporan: [], permohonan: [],
       profiles: [clone(USERS.admin), clone(USERS.editor), clone(USERS.staf), clone(USERS.pengawal)].map(function (u, i) { u.dicipta = daysAgo(90 - i * 20); return u; })
     };
     function tut(id, prod, n, ms, en, sms, sen, status, opts) {
@@ -84,6 +84,8 @@
     db.cadangan.push({ id: U.uid(), user_id: USERS.staf.id, nama: 'Kumar (Staf)', produk_id: P.ops, tajuk: 'Cara eksport laporan ke PDF', butiran: 'Penyelia selalu tanya.', status: 'baru', dicipta: daysAgo(3), dikemas_kini: daysAgo(3) });
     db.laporan.push({ id: U.uid(), user_id: USERS.staf.id, nama: 'Kumar (Staf)', tutorial_id: T.app1, jenis: 'gambar', butiran: 'Gambar langkah 2 nampak lama.', status: 'baru', dicipta: daysAgo(1), dikemas_kini: daysAgo(1) });
     db.kegemaran.push({ user_id: USERS.staf.id, tutorial_id: T.lite1, dicipta: daysAgo(5) });
+    db.permohonan.push({ id: U.uid(), user_id: USERS.pengawal.id, nama: USERS.pengawal.nama, emel: USERS.pengawal.emel, peranan_semasa: 'pengawal', peranan: 'staf',
+      sebab: 'Saya penyelia syif malam di tapak Bangsar.', status: 'baru', diproses_pada: null, dicipta: daysAgo(1) });
     return db;
   }
 
@@ -373,6 +375,49 @@
       p.peranan = peranan;
       if (S.me && S.me.id === id) S.me.peranan = peranan;
       return later(p);
+    };
+
+    var RANK = { pengawal: 0, staf: 1, editor: 2, admin: 3 };
+    function rank(r) { return r in RANK ? RANK[r] : -1; }
+    function byNewest(a, b) { return String(b.dicipta).localeCompare(String(a.dicipta)); }
+    S.refreshMe = function () {
+      if (!S.me) return later(null);
+      var p = find(db.profiles, S.me.id);
+      if (p) S.me.peranan = p.peranan;
+      return later(S.me);
+    };
+    S.listMyRoleRequests = function () {
+      if (!S.me) return later([]);
+      return later(db.permohonan.filter(function (r) { return r.user_id === S.me.id; }).sort(byNewest).slice(0, 5));
+    };
+    S.requestRole = function (peranan, sebab) {
+      if (!S.me) return fail('permission');
+      if (['staf', 'editor', 'admin'].indexOf(peranan) < 0 || rank(peranan) <= rank(role())) return fail('invalid');
+      if (db.permohonan.some(function (r) { return r.user_id === S.me.id && r.status === 'baru'; })) return fail('invalid');
+      var row = { id: U.uid(), user_id: S.me.id, nama: S.me.nama || S.me.emel.split('@')[0], emel: S.me.emel, peranan_semasa: role(), peranan: peranan,
+        sebab: String(sebab || '').trim().slice(0, 500), status: 'baru', diproses_pada: null, dicipta: now() };
+      db.permohonan.push(row);
+      return later(row);
+    };
+    S.cancelRoleRequest = function (id) {
+      var r = find(db.permohonan, id);
+      if (!r || !S.me || !(isAdmin() || (r.user_id === S.me.id && r.status === 'baru'))) return fail('notfound');
+      db.permohonan = db.permohonan.filter(function (x) { return x.id !== id; });
+      return later(true);
+    };
+    S.listRoleRequests = function () { return isAdmin() ? later(db.permohonan.slice().sort(byNewest)) : later([]); };
+    S.decideRoleRequest = function (id, status) {
+      if (!isAdmin()) return fail('permission');
+      if (status !== 'diluluskan' && status !== 'ditolak') return fail('invalid');
+      var r = find(db.permohonan, id);
+      if (!r) return fail('notfound');
+      if (r.status !== 'baru') return fail('invalid');
+      r.status = status; r.diproses_pada = now();
+      if (status === 'diluluskan') {
+        var p = find(db.profiles, r.user_id);
+        if (p && rank(p.peranan) < rank(r.peranan)) p.peranan = r.peranan;
+      }
+      return later(r);
     };
 
     S.classify = function (e) { return e && e.code ? e : StoreError('unknown'); };

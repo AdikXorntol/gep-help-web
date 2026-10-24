@@ -34,7 +34,7 @@
     if (/invalid.*email|email.*invalid|unable to validate email/i.test(msg)) return StoreError('auth-email', err);
     if (/signups? not allowed|signup.*disabled/i.test(msg)) return StoreError('auth-closed', err);
     // The website is newer than the database (schema.sql not run again yet).
-    if (code === 'PGRST204' || /could not find the '[^']+' column|column "?[a-z_]+"? (of relation "?[a-z_]+"? )?does not exist/i.test(msg)) return StoreError('db-update', err);
+    if (code === 'PGRST204' || code === 'PGRST205' || code === '42P01' || /could not find the '[^']+' column|could not find the table|column "?[a-z_]+"? (of relation "?[a-z_]+"? )?does not exist|relation "?[a-z_.]+"? does not exist/i.test(msg)) return StoreError('db-update', err);
     if (code === '42501' || code === 'PGRST116' || /row-level security|permission denied|not authorized|unauthorized/i.test(msg) || status === 401 || status === 403) return StoreError('permission', err);
     if (code === '23514' || code === '23502' || code === '22P02' || code === '23505' || /violates check|invalid input/i.test(msg)) return StoreError('invalid', err);
     if (/mime type|payload too large|exceeded the maximum allowed size/i.test(msg) || status === 413 || status === 415) return StoreError('image-size', err);
@@ -98,6 +98,12 @@
       lastUserId = uid;
       loadProfile(session && session.user).then(function () { emit(uid ? 'signed-in' : 'signed-out'); });
     }
+
+    // Pick up a role change (e.g. an approved request) without signing out and in again.
+    S.refreshMe = function () {
+      if (!S.me) return Promise.resolve(null);
+      return loadProfile({ id: S.me.id, email: S.me.emel });
+    };
 
     S.init = function () {
       var ready = false;
@@ -372,6 +378,30 @@
     S.setStatus = function (table, id, status) {
       if (['cadangan', 'laporan'].indexOf(table) < 0) return Promise.reject(StoreError('invalid'));
       return sb.from(table).update({ status: status }).eq('id', id).select('*').single().then(must);
+    };
+
+    /* ---------------- role requests ---------------- */
+    var REQ_COLS = 'id,user_id,nama,emel,peranan_semasa,peranan,sebab,status,diproses_pada,dicipta';
+    S.listMyRoleRequests = function () {
+      if (!S.me) return Promise.resolve([]);
+      return sb.from('permohonan_peranan').select(REQ_COLS).eq('user_id', S.me.id).order('dicipta', { ascending: false }).limit(5).then(must);
+    };
+    S.requestRole = function (peranan, sebab) {
+      return sb.from('permohonan_peranan').insert({ peranan: peranan, sebab: String(sebab || '').trim().slice(0, 500) })
+        .select(REQ_COLS).single().then(must);
+    };
+    S.cancelRoleRequest = function (id) {
+      return sb.from('permohonan_peranan').delete().eq('id', id).select('id').then(must).then(function (rows) {
+        if (!rows || !rows.length) throw StoreError('notfound');
+        return true;
+      });
+    };
+    S.listRoleRequests = function () {
+      return sb.from('permohonan_peranan').select(REQ_COLS).order('dicipta', { ascending: false }).limit(200).then(must);
+    };
+    S.decideRoleRequest = function (id, status) {
+      if (status !== 'diluluskan' && status !== 'ditolak') return Promise.reject(StoreError('invalid'));
+      return sb.from('permohonan_peranan').update({ status: status }).eq('id', id).select(REQ_COLS).single().then(must);
     };
 
     /* ---------------- admin ---------------- */

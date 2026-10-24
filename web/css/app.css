@@ -290,9 +290,31 @@ svg { display: block; }
 .seg { display: flex; gap: 4px; padding: 4px; border-radius: 12px; background: var(--soft); border: 1px solid var(--line); margin-top: 12px; }
 .seg button { appearance: none; flex: 1; min-height: 44px; border: 0; border-radius: 9px; background: transparent; font-weight: 700; font-size: 0.92rem; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
 .seg button[aria-selected="true"], .seg button[aria-pressed="true"] { background: var(--ink); color: #fff; }
+.home-tabs { margin: 0 0 18px; }
+.home-tabs button { padding: 4px 6px; line-height: 1.15; text-align: center; color: var(--ink-2); }
+.home-tabs button:not([aria-selected="true"]):hover { background: var(--card); }
+.home-tabs .count { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--signal); color: var(--ink); font-size: 0.74rem; flex: none; }
 .radios { display: flex; flex-direction: column; gap: 6px; }
 .radio { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 12px; border-radius: 10px; border: 1.5px solid var(--line); font-weight: 400; }
 .radio input { width: 20px; height: 20px; accent-color: var(--ink); }
+.radios label.radio.tall { display: flex; flex-direction: row; align-items: flex-start; gap: 12px; padding: 12px; margin: 0; }
+.radio.tall input { margin-top: 2px; flex: none; }
+.radio.tall span { display: flex; flex-direction: column; gap: 2px; }
+.radio.tall small { color: var(--muted); font-size: 0.86rem; line-height: 1.35; font-weight: 400; }
+.radio.tall b { font-weight: 700; }
+.reqs-box + .sec-h { margin-top: 22px; }
+.radio:has(input:checked) { border-color: var(--ink); background: var(--soft); }
+.req-card { border: 1px dashed #c99700; background: #fffaf0; border-radius: 12px; padding: 12px 14px; margin: 10px 0 12px; }
+.req-card p { margin: 0 0 8px; }
+.req-last { margin: 6px 0 12px; }
+.reqs li { align-items: flex-start; gap: 10px; }
+.reqs .grow { flex: 1 1 220px; min-width: 0; }
+.reqs .btn-row { margin: 0; flex: 1 1 100%; }
+.req-roles { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 6px 0; }
+.req-why { margin: 4px 0; font-style: italic; overflow-wrap: anywhere; }
+.reqs-box h2 .badge { vertical-align: middle; margin-left: 4px; }
+.req-history summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 700; }
+.role-chip.r-staf { background: var(--ok-bg); color: var(--ok); border-color: #a9d8b8; }
 .demo-pick { padding: 12px; border-radius: 12px; background: var(--info-bg); margin-top: 8px; font-size: 0.92rem; }
 .demo-pick .foot-actions { margin-top: 8px; }
 .demo-pick .btn { flex: 1 1 90px; min-height: 44px; }
