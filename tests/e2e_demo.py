@@ -178,6 +178,20 @@ def run(browser):
     check("Bahasa pertama ikut pelayar (en → English)", page.evaluate("document.documentElement.lang") == "en" and "Welcome to GEP Help" in page.inner_text(".welcome"))
     ctx.close()
 
+    # Each welcome slide must actually be on screen (wide screens once showed slides 2 and 3 empty).
+    ON_SCREEN = """() => { const s = document.querySelector('.w-slide[aria-hidden=false] h2'); const r = s.getBoundingClientRect();
+      const others = [...document.querySelectorAll('.w-slide[aria-hidden=true] h2')].filter(h => { const q = h.getBoundingClientRect(); return q.right > 0 && q.left < innerWidth; });
+      return r.left >= 0 && r.right <= innerWidth && others.length === 0; }"""
+    for w, h in [(1366, 700), (1920, 1000), (390, 760)]:
+        ctx, page = new_page(browser, width=w, height=h, welcome_seen=False)
+        ok = [page.evaluate(ON_SCREEN)]
+        for _ in range(2):
+            page.click("[data-act=w-next]")
+            page.wait_for_timeout(450)
+            ok.append(page.evaluate(ON_SCREEN))
+        check("Aluan %dpx: setiap slaid kelihatan, satu demi satu" % w, all(ok), ok)
+        ctx.close()
+
     # ---------------- language on every main screen ----------------
     ctx, page = new_page(browser)
     login(page, "admin")

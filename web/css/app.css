@@ -336,7 +336,9 @@ svg { display: block; }
 .w-top { display: flex; align-items: center; gap: 10px; padding: 0 20px; }
 .w-skip { appearance: none; border: 0; background: none; font-weight: 700; font-size: 0.98rem; min-height: 44px; padding: 0 6px; text-decoration: underline; text-underline-offset: 3px; }
 .w-track { flex: 1; display: flex; transition: transform 0.32s cubic-bezier(.2,.8,.2,1); touch-action: pan-y; min-height: 0; }
-.w-slide { flex: 0 0 100%; display: flex; flex-direction: column; justify-content: center; padding: 10px 26px; min-width: 0; max-width: 560px; margin: 0 auto; }
+/* Each slide is exactly one screen wide (the slider moves by whole screens); the content stays in a
+   centred 560px column on wide screens through the side padding, not a max-width on the slide. */
+.w-slide { flex: 0 0 100%; width: 100%; display: flex; flex-direction: column; justify-content: center; padding: 10px max(26px, calc((100% - 560px) / 2 + 26px)); min-width: 0; }
 .w-art { width: 100%; max-width: 300px; aspect-ratio: 300 / 240; margin: 0 auto 26px; }
 .w-art svg { width: 100%; height: 100%; }
 .w-slide h2 { font-family: var(--font-cn); font-weight: 700; font-size: 2.1rem; line-height: 1.03; max-width: 16ch; }
